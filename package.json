@@ -22,12 +22,10 @@
     "check:pages": "node scripts/check-pages.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "22.20.5",
     "esbuild": "0.28.1",
-    "typescript": "5.9.3"
-  },
-  "dependencies": {
-    "@playwright/test": "1.63.0",
+    "typescript": "5.9.3",
     "wrangler": "4.140.0"
   }
 }

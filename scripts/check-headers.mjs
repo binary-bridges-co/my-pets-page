@@ -60,7 +60,9 @@ async function check(base) {
   expect(home.res.status === 200, `/: status ${home.res.status}`);
   headers('/', home.res, { 'cache-control': 'no-cache' });
 
-  for (const asset of page.body.match(/\/assets\/page\.[0-9a-f]{12}\.(js|css)/g) ?? []) {
+  const assets = page.body.match(/\/assets\/page\.[0-9a-f]{12}\.(js|css)/g) ?? [];
+  expect(assets.length === 2, `/p/<id>: found ${assets.length} hashed assets, want the script and the stylesheet`);
+  for (const asset of assets) {
     const a = await get(base, asset);
     expect(a.res.status === 200, `${asset}: status ${a.res.status}`);
     const type = asset.endsWith('.js') ? /javascript/ : /^text\/css/;

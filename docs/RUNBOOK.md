@@ -23,7 +23,7 @@ At https://icloud.developer.apple.com, container `iCloud.co.binarybridges.pets`,
 4. **Deploy** the schema to Production (Schema → Deploy Schema Changes). Check in Production that the type, fields, no indexes and the roles are there.
 5. **API tokens** (Settings → Tokens & Keys → API Tokens → +):
    - `my-pets-page production`: environment Production, Allowed Origins **Specific domains** `https://pets.binarybridges.co`, no sign-in callback.
-   - `my-pets-page development`: environment Development, Allowed Origins the Pages preview domain `https://my-pets-page.pages.dev` (and `*.my-pets-page.pages.dev` if the Console accepts a wildcard; if not, the branch previews can't read records, which is fine).
+   - `my-pets-page development`: environment Development, Allowed Origins the Pages preview domain `https://my-pets-page.pages.dev` (branch previews at `<hash>.my-pets-page.pages.dev` then can't read records, which is fine).
 6. Put the tokens in `config/production.json` and `config/development.json` (`apiToken`) in a PR. They are public by design (DESIGN §3, T18); the roles protect the records. Rotating one is a new token, the same PR, and a redeploy.
 
 **Phase 0 spike (first thing after step 5).** From a terminal, with the development token and a record the app saved in Development:
@@ -41,7 +41,7 @@ Record in `docs/DESIGN.md` §3 and as fixtures in `test/support/scenarios.ts`: t
 
 1. Create a free Cloudflare account (owner's email, two-factor on). No credit card is needed for Pages.
 2. Workers & Pages → Create → **Pages** → Connect to Git → GitHub → install the Cloudflare app on `binary-bridges-co` for **this repository only** → choose `my-pets-page`.
-3. Project name `my-pets-page` (so the address is `my-pets-page.pages.dev`). Production branch `main`.
+3. Project name `my-pets-page` (so the address is `my-pets-page.pages.dev`). Production branch `main`. If Cloudflare gives the project another `*.pages.dev` name (the name is taken), use that name everywhere below and in the development token's origin.
 4. Build settings: framework **None**; build command
    ```
    npm ci && npm run build -- --config=$([ "$CF_PAGES_BRANCH" = "main" ] && echo production || echo development)
@@ -52,7 +52,7 @@ Record in `docs/DESIGN.md` §3 and as fixtures in `test/support/scenarios.ts`: t
    ```bash
    npm run check:headers -- https://my-pets-page.pages.dev
    ```
-   It must print `check-headers: … checks pass`. (CI already runs the same check against `wrangler pages dev`, Cloudflare's local emulation, and the local preview.)
+   It must print `check-headers: … checks pass`. (CI already runs the same check against `wrangler pages dev`, Cloudflare's local emulation, and the local preview.) If the only failure is `x-robots-tag` on the `pages.dev` address (Pages may add its own `noindex` there), that is expected; the check on the custom domain in step 3 must pass in full.
 
 ## 3. The custom domain
 
@@ -69,7 +69,8 @@ Record in `docs/DESIGN.md` §3 and as fixtures in `test/support/scenarios.ts`: t
    curl -sI https://pets.binarybridges.co/.well-known/apple-app-site-association   # 200, application/json, no Location
    curl -s https://app-site-association.cdn-apple.com/a/v1/pets.binarybridges.co    # the same JSON, once Apple's CDN fetched it (can take a day)
    ```
-5. Nothing changes in bb-infrastructure: the cluster no longer serves `pets.`; remove its route there separately when convenient.
+5. Apple's CDN caches the AASA file; a later change to it can take a day or more to reach phones. The app's Associated Domains entitlement `applinks:pets.binarybridges.co` is already in the app (umbrella plan R2.6); the signed beta build carries it.
+6. Nothing changes in bb-infrastructure: the cluster no longer serves `pets.`; remove its route there separately when convenient.
 
 ## 4. Device checks (umbrella plan, device checklist 1, 11, 12, 14, 15, 18, 19)
 
