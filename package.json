@@ -17,7 +17,9 @@
     "test": "npm run test:unit",
     "fixtures": "node scripts/gen-fixtures.mjs",
     "preview": "node scripts/preview.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:headers": "node scripts/check-headers.mjs",
+    "check:pages": "node scripts/check-pages.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
@@ -25,6 +27,7 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@playwright/test": "1.63.0"
+    "@playwright/test": "1.63.0",
+    "wrangler": "4.140.0"
   }
 }
