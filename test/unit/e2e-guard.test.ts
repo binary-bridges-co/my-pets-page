@@ -13,5 +13,6 @@ test('browser specs import test only from ./support', () => {
     const text = readFileSync(new URL(f, dir), 'utf8');
     assert.ok(!text.includes("from '@playwright/test'"), `${f} imports @playwright/test directly`);
     assert.ok(text.includes("from './support'"), `${f} doesn't use ./support`);
+    assert.ok(!/\btest\.(skip|fixme|only)\b|\bdescribe\.(skip|only)\b/.test(text), `${f} skips or narrows tests`);
   }
 });
