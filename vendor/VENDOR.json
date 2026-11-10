@@ -1,0 +1,16 @@
+{
+  "comment": "Vendored, pinned code. check-vendor.mjs fails the build when a file's SHA-256 differs. Update: npm pack @noble/ed25519@<version>, copy the files, put the new hashes here.",
+  "packages": [
+    {
+      "name": "@noble/ed25519",
+      "version": "3.2.0",
+      "source": "https://registry.npmjs.org/@noble/ed25519/-/ed25519-3.2.0.tgz",
+      "integrity": "sha512-criDgRlnUA09hchYrTy/JUWPIEap5rZxQe6wDWzRx51oWWpDRcUpuNzlgPxDJaOK6AsW9c0wKcj3rKRv6t+bPQ==",
+      "files": {
+        "noble-ed25519/index.js": "a4f631d1876b5d9e43a86cd71194ca27b5e1451edf4ba4db9a418f40a475569a",
+        "noble-ed25519/index.d.ts": "c1c17eb9eacdb71ea076083d24c070e9f112712c97950c5d1079b34e627a4bc9",
+        "noble-ed25519/LICENSE": "394c2e6e5552e5dba202bee6390b9d6aa2754d657f5b9869e83b3d265a315501"
+      }
+    }
+  ]
+}

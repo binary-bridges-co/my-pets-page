@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, unit tests, budget
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Spec vectors are the pinned copy
+        run: npm run check:spec
+      - name: Build (vendor check, type check, bundle)
+        run: npm run build
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Weight budget
+        run: npm run check:budget
+      - name: The GitHub Pages fallback builds too
+        run: node scripts/build.mjs --host=github-pages && npm run check:budget

@@ -1,0 +1,6 @@
+{
+  "comment": "The page's CloudKit settings (docs/DESIGN.md §3). The API token is public by design: a web page's token is visible to every visitor and the container's security roles protect the records. PLACEHOLDER until go-live (docs/RUNBOOK.md); rotating it is a redeploy.",
+  "containerId": "iCloud.co.binarybridges.pets",
+  "environment": "production",
+  "apiToken": "PLACEHOLDERPRODUCTIONTOKEN"
+}
