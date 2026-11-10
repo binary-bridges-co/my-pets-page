@@ -40,10 +40,10 @@ export type Outcome =
 
 const CARD_TAG = 'mypets/public-card/v1';
 const OP_TAG = 'mypets/public-card-op/v1';
-// SPEC15R2: the eight names, the field table and its sizes (§15.7 r2).
+// the eight names, the field table and its sizes (§15.7 r2).
 export const SUCCESSORS = 7;
 const MAX_BODY = 4096;
-// SPEC15R2: 395 days for a card or an unpublish, exactly 395 accepted (§15.8 r2 step 4).
+// 395 days for a card or an unpublish, exactly 395 accepted (§15.8 r2 step 4).
 const MAX_AGE_MS = 395 * 24 * 60 * 60 * 1000;
 
 /** `<id>`, then `<id>.1` … `<id>.7`: the names one lookup asks for. */
@@ -66,7 +66,7 @@ function bytesField(f: FieldValue | undefined, min: number, max: number): Uint8A
   return f.bytes;
 }
 
-// SPEC15R2: an operation is a body that is a JSON object with an `op` member; anything else is a card.
+// an operation is a body that is a JSON object with an `op` member; anything else is a card.
 function isOperationShape(body: Uint8Array): boolean {
   try {
     const parsed: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
@@ -82,7 +82,7 @@ async function sha256(bytes: Uint8Array): Promise<string> {
 
 /** Step 3: the photo's bytes when they pass, else the code; the card is kept either way. */
 async function checkPhoto(card: Card, stored: Uint8Array | undefined): Promise<{ photo?: Uint8Array; photoError?: string }> {
-  // SPEC15R2: bytes beside a card without `photo` are photo.mismatch; never shown.
+  // bytes beside a card without `photo` are photo.mismatch; never shown.
   if (!card.photo) return stored ? { photoError: 'photo.mismatch' } : {};
   if (!stored || (await sha256(stored)) !== card.photo.sha256) return { photoError: 'photo.mismatch' };
   const size = checkJpeg(stored);
@@ -102,7 +102,7 @@ async function accept(id: string, names: readonly string[], r: ReaderRecord, now
   const sig = bytesField(f.sig, 64, 64);
   const photo = f.photo === undefined ? undefined : bytesField(f.photo, 1, MAX_PHOTO_BYTES);
   const isOp = isOperationShape(body);
-  // SPEC15R2: an operation beside a photo breaks the record.
+  // an operation beside a photo breaks the record.
   if (isOp && photo) ignore('record.invalid');
 
   // Step 2: §15.4, in its order.
@@ -121,7 +121,7 @@ async function accept(id: string, names: readonly string[], r: ReaderRecord, now
     // Step 3.
     accepted = { kind: 'card', name: r.name, published: card.published, card, bytes: body, ...(await checkPhoto(card, photo)) };
   }
-  // Step 4. SPEC15R2: a deactivate never ages out (it is final, and only the tag key signs one).
+  // Step 4: a deactivate never ages out (it is final, and only the tag key signs one).
   const final = accepted.kind === 'op' && accepted.op.op === 'deactivate';
   if (!final && nowMs - Date.parse(accepted.published) > MAX_AGE_MS) ignore('published.stale');
   return accepted;
@@ -147,7 +147,7 @@ export async function readRecords(id: string, records: readonly ReaderRecord[], 
       rejected.push({ name: r.name, error: e.message });
     }
   }
-  // SPEC15R2: any deactivate wins, whatever is newer.
+  // any deactivate wins, whatever is newer.
   const deactivate = accepted.filter((a) => a.kind === 'op' && a.op.op === 'deactivate').sort(decides)[0];
   if (deactivate) return { state: 'deactivated', recordName: deactivate.name, published: deactivate.published, rejected };
   const top = [...accepted].sort(decides)[0];

@@ -107,6 +107,5 @@ function readerExpected(c: Case): string {
   return JSON.stringify(want, Object.keys(want).sort());
 }
 
-const version = (vectors as { version: number }).version;
-// SPEC15R2: version 1 (pinned until 8b2 merges) has no reader cases; version 2 has at least 40.
-kind('reader', version >= 2 ? 40 : 0, reader, readerExpected);
+test('public-card.json is version 2 (§15 r2)', () => assert.equal((vectors as { version: number }).version, 2));
+kind('reader', 42, reader, readerExpected);

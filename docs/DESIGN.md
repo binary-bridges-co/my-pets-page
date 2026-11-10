@@ -2,7 +2,7 @@
 
 Status: proposal, 9 Nov 2026. A static site: one HTML page, one stylesheet and one script, on a free host.
 Plan: `.claude/PRPs/plans/phase-8-static-page.plan.md` in `binary-bridges-co/my-pets-ios` (umbrella § "Amendment round 2").
-Contract: Spec §15 revision 2 (`Spec/envelope-v1.md` §15.7–§15.12) and `Spec/vectors/public-card.json` version 2, copied here with a pinned commit (`test/spec/SPEC_SOURCE`). Every place in the code that depends on a §15 r2 detail not yet merged in the iOS repo is marked `// SPEC15R2:`; §12 lists them.
+Contract: Spec §15 revision 2 (`Spec/envelope-v1.md` §15.7–§15.12) and `Spec/vectors/public-card.json` version 2, copied here with a pinned commit (`test/spec/SPEC_SOURCE`). §15 r2 merged in the iOS repo on 10 Nov 2026 (8b2, iOS PR #176, vectors at `3b58a938`); the page's reader runs all its `reader` cases (§12).
 
 Reused from the archived Kotlin server (`binary-bridges-co/my-pets-server`): the page design, its states and strings in English and Spanish, the stylesheet, the fragment reader and the cofactorless Ed25519 verifier on vendored `@noble/ed25519`, and the server's DESIGN §7 (states, budget), §8 (headers), §10 (app links) and §12 (threats T5, T6, T8). Everything server-only (controllers, Postgres, rate limits, Traefik) is gone.
 
@@ -55,6 +55,7 @@ Sources, read 5–9 Nov 2026: CloudKit Web Services Reference (archive, last upd
 | C4 | **Can a browser call it (CORS)?** | The documentation never says "CORS" or "browser". It says an API token is for "a website or an embedded web view", and the token's **Allowed Origins** setting ("Restrict the domains that can access your app's container using CloudKit web services") only means something for browser calls, which send `Origin`. CloudKit JS, Apple's own browser library, calls this same host from the page's origin with `XMLHttpRequest`, which a browser allows only when the answer carries CORS headers | **Inferred yes; to verify live.** The page sends a CORS-simple request (`POST` with a `text/plain;charset=UTF-8` body, the content type of Apple's own example, no custom header), so no preflight should be needed. If the live check fails: owner question Q-R2-4 |
 | C5 | Rate limits | A throttle (`THROTTLED`, `retryAfter`), no published per-request price | Documented; the current limits are *to verify* in the Console's Usage page |
 | C6 | What Apple logs | The Console offers developers "server log data" | *To verify:* what the Console shows for anonymous web lookups (R2.1 A6) |
+| C8 | Does a record's metadata name a device? | **Yes, documented.** "Types and Dictionaries" lists `created` and `modified` on every returned record as dictionaries with `timestamp`, `userRecordName` and **`deviceID`**. So anyone who looks a record up sees when it was written, the writer's container-scoped user id (Spec §15.9: links of one owner can be tied together) and an id for the device that wrote it. The reference doesn't say what `deviceID` is (an opaque per-device id, a device name, or a fixed value) | *To verify live* (RUNBOOK step 1): the value CloudKit returns for a record the app saved. If it is a stable per-device id, two links written from one phone are tied by it as well as by `userRecordName`; if it is a device name ("Ana's iPhone"), that is personal data in a public record and goes to the owner before go-live. The page never reads or shows the metadata |
 | C7 | CloudKit JS | Not deprecated, not developed. Not used: it would be a third-party script (CSP, budget, privacy) | Settled (R2.1 A7) |
 
 Everything CloudKit-specific sits behind one function, `lookup()` in `src/cloudkit.ts`: names in, records or a failure out. The reader (§4) works on `{name, fields: {key: {type, bytes | value}}}` and doesn't know CloudKit's wire form.
@@ -168,16 +169,11 @@ Portability: `npm run build -- --host=github-pages` writes the same files plus a
 | T18 | The token is abused | It reads only what is public by link; the World role can't write; Allowed Origins stops other sites embedding it | Scripts can read records by name, as anyone can |
 | T19 | Supply chain | No runtime dependency but the vendored, hash-pinned `@noble/ed25519`; dev tools pinned exactly; actions pinned by SHA | Standard |
 
-## 12. Dependencies on Spec §15 r2
+## 12. Spec §15 r2
 
-Until `public-card.json` version 2 is merged in the iOS repo and copied here, the code follows the round-2 plan (R2.3) and the 8b2 draft, and marks each spot with `// SPEC15R2:`:
-- the record's field table and the eight names (§15.7);
-- how a body's shape picks its tag (an object with `op`);
-- an operation beside a `photo` is `record.invalid`; photo bytes beside a card without `photo` are `photo.mismatch`;
-- the 395-day rule and its edge, and a `deactivate` that never ages out;
-- the selection: deactivate first, then the newest, a tie to the operation and then the lower name;
+`test/spec/public-card.json` is my-pets-ios `3b58a938:Spec/vectors/public-card.json` (version 2, 126 cases), pinned by SHA-256 in `test/spec/SPEC_SOURCE` and checked in CI (`npm run check:spec`; `IOS_REPO=<checkout>` also compares the bytes). `test/unit/vectors.test.ts` runs its 16 signature, 10 fragment, 25 card and 42 reader cases through the page's own code. The page was built against the round-2 plan and the 8b2 draft with `SPEC15R2` markers; the merged vectors settled every one (the record table and eight names, the body shape picking the tag, a photo beside an operation, the 395-day rule with a `deactivate` never ageing out, the selection, and "unpublished" not falling back to the fragment), and the markers are gone. No disagreement between §15 r2 and its vectors was found.
 
-The page's reader passes every `reader` case of the 8b2 draft (`public-card.json` version 2, 41 cases, run locally against the unmerged file); the pinned copy moves to version 2 when 8b2 merges.
+When §15 changes: copy the new file, update `SPEC_SOURCE` (commit and SHA-256), run `npm test`.
 
 ## 13. Tests
 

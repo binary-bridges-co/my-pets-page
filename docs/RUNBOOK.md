@@ -35,7 +35,7 @@ curl -s -X POST -H 'Content-Type: text/plain;charset=UTF-8' \
   --data '{"records":[{"recordName":"<id>"},{"recordName":"<id>.1"}]}'
 ```
 
-Record in `docs/DESIGN.md` §3 and as fixtures in `test/support/scenarios.ts`: the CORS headers (`Access-Control-Allow-Origin` for the page's origin: **C4**, the open question), the shape of a found record (`type` strings, the Base64 form of Bytes) and of a missing name (`NOT_FOUND`), and a throttled answer if one can be provoked. Then open the Pages preview (step 2) on a real link in Safari, Chrome and Firefox and check Web Inspector shows one `POST` to `api.apple-cloudkit.com`, with no preflight error. If the browser call fails on CORS: stop, owner question Q-R2-4. Finally look at what the Console's logs show for these anonymous lookups (C6).
+Record in `docs/DESIGN.md` §3 and as fixtures in `test/support/scenarios.ts`: the CORS headers (`Access-Control-Allow-Origin` for the page's origin: **C4**, the open question), the shape of a found record (`type` strings, the Base64 form of Bytes) and of a missing name (`NOT_FOUND`), and a throttled answer if one can be provoked. Then open the Pages preview (step 2) on a real link in Safari, Chrome and Firefox and check Web Inspector shows one `POST` to `api.apple-cloudkit.com`, with no preflight error. If the browser call fails on CORS: stop, owner question Q-R2-4. Note what the found record's `created` and `modified` carry, `deviceID` especially (C8): a device name in it is personal data in a public record and goes to the owner before go-live. Finally look at what the Console's logs show for these anonymous lookups (C6).
 
 ## 2. Cloudflare Pages: the project
 
