@@ -19,9 +19,10 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.setViewportSize({ width, height: 800 });
       for (const [name, fragment] of PAGES) {
         await open(page, name, fragment);
-        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        const overflow = await page.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth);
         expect(overflow, `${name} at ${width} px`).toBe(0);
         const call = page.locator('a.button.primary').first();
+        if (name === 'lostLongName' || name === 'published') await expect(call, `Call on ${name}`).toHaveCount(1);
         if ((await call.count()) > 0) {
           const box = await call.boundingBox();
           expect(box && box.x >= 0 && box.x + box.width <= width, `Call inside the viewport, ${name} at ${width}`).toBe(true);

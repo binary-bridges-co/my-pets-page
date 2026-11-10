@@ -4,6 +4,7 @@ import { expect, open, test } from './support';
 
 const STATES: [string, string | undefined][] = [
   ['published', undefined],
+  ['hostile', undefined],
   ['lost', undefined],
   ['deactivated', undefined],
   ['notFound', undefined],
@@ -41,7 +42,9 @@ test('keyboard: in state C the first stop is Call my family, then Send where I a
 });
 
 test('reduced motion turns transitions off', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
   await open(page, 'lost');
-  expect(await page.locator('a.button').first().evaluate((a) => getComputedStyle(a).transitionDuration)).toMatch(/^0s/);
+  const duration = () => page.locator('a.button').first().evaluate((a) => getComputedStyle(a).transitionDuration);
+  expect(await duration()).not.toMatch(/^0s$/);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(await duration()).toMatch(/^0s$/);
 });

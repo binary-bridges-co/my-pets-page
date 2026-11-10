@@ -12,25 +12,32 @@ const CLOUDKIT = 'https://api.apple-cloudkit.com';
 
 /** Runs before the page's own code: records CSP violations, and fails a test that sees one. */
 const CSP_WATCH =
-  "window.__csp = []; document.addEventListener('securitypolicyviolation', " +
-  "e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI), true);";
+  "document.addEventListener('securitypolicyviolation', " +
+  "e => window.__cspReport(e.violatedDirective + ' ' + e.blockedURI + ' ' + location.pathname), true);";
 
 export interface Logged {
   url: string;
   method: string;
   body: string | null;
-  headers: Record<string, string>;
+  /** Every header the browser sent, Cookie and Referer included. */
+  headers: Promise<Record<string, string>>;
 }
 
 /** Answers CloudKit from the fixtures and aborts any other request that leaves the preview. */
 export async function fakeNetwork(context: BrowserContext, baseURL: string, log: Logged[]): Promise<void> {
   const origin = new URL(baseURL).origin;
-  context.on('request', (r: Request) => log.push({ url: r.url(), method: r.method(), body: r.postData(), headers: r.headers() }));
+  context.on('request', (r: Request) => {
+    const headers = r.allHeaders();
+    headers.catch(() => undefined);
+    log.push({ url: r.url(), method: r.method(), body: r.postData(), headers });
+  });
   await context.route('**/*', async (route) => {
     const url = new URL(route.request().url());
     if (url.origin === origin || url.protocol === 'blob:' || url.protocol === 'data:') return route.continue();
     if (url.origin !== CLOUDKIT) return route.abort('blockedbyclient');
-    const cors = { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'content-type' };
+    // No Set-Cookie here: Firefox's and WebKit's interception stores a fulfilled cookie whatever the
+    // request's credentials mode, so the privacy test instead seeds cookies and checks none is sent.
+    const cors = { 'Access-Control-Allow-Origin': origin };
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
     const names = (JSON.parse(route.request().postData() ?? '{}') as { records?: { recordName: string }[] }).records?.map((r) => r.recordName) ?? [];
     const scenario = Object.values(scenarios).find((s) => s.id === names[0]);
@@ -40,10 +47,18 @@ export async function fakeNetwork(context: BrowserContext, baseURL: string, log:
   });
 }
 
-export const test = base.extend<{ log: Logged[] }>({
-  log: async ({ context, baseURL }, use) => {
-    const log: Logged[] = [];
+export const test = base.extend<{ log: Logged[]; csp: string[] }>({
+  // Every CSP violation on every document a test opens, reported out of the page as it happens.
+  csp: async ({ context }, use) => {
+    const csp: string[] = [];
+    await context.exposeBinding('__cspReport', (_source, v: string) => void csp.push(v));
     await context.addInitScript(CSP_WATCH);
+    await use(csp);
+    expect(csp, 'CSP violations').toEqual([]);
+  },
+  log: async ({ context, baseURL, csp }, use) => {
+    void csp;
+    const log: Logged[] = [];
     await fakeNetwork(context, baseURL as string, log);
     await use(log);
   },
@@ -51,7 +66,6 @@ export const test = base.extend<{ log: Logged[] }>({
     void log;
     await page.clock.setFixedTime(new Date(NOW));
     await use(page);
-    expect(await page.evaluate(() => (window as unknown as { __csp?: string[] }).__csp ?? []).catch(() => []), 'CSP violations').toEqual([]);
   },
 });
 
