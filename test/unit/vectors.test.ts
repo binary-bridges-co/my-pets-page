@@ -5,7 +5,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import vectors from '../spec/public-card.json';
 import { keyPassesRules, verifyStrict } from '../../src/ed25519';
+import { hex } from '../../src/ed25519';
 import { fromBase64Url, linkIdOf, readChipCard, readFragment, signedMessage } from '../../src/fragment';
+import { type FieldValue, readRecords, type ReaderRecord } from '../../src/reader';
 
 export interface Case {
   name: string;
@@ -64,3 +66,47 @@ kind(
   },
   (c) => (c.expect === 'valid' && /"(lost|photo)":/.test(c.input as string) ? 'card.invalid' : want(c)),
 );
+
+// §15.8 r2's reader cases (public-card.json version 2): the records of one lookup, as CloudKit fields
+// with `valueHex` for Bytes, and what the page shows.
+interface VectorField {
+  type: string;
+  value?: unknown;
+  valueHex?: string;
+}
+
+function toReaderRecord(r: { name: string; fields: Record<string, VectorField> }): ReaderRecord {
+  const fields: Record<string, FieldValue> = {};
+  for (const [k, f] of Object.entries(r.fields)) {
+    fields[k] = f.valueHex !== undefined ? { type: f.type, bytes: fromHex(f.valueHex) } : { type: f.type, value: f.value };
+  }
+  return { name: r.name, fields };
+}
+
+const ERRORS: Record<string, string> = { notPublished: 'link.notPublished', unpublished: 'link.unpublished', deactivated: 'link.deactivated' };
+
+/** The reader's outcome in the vector's own terms, so one deepEqual compares every member the case pins. */
+async function reader(c: Case): Promise<string> {
+  const records = (c.records as { name: string; fields: Record<string, VectorField> }[]).map(toReaderRecord);
+  const o = await readRecords(c.id as string, records, Date.parse(c.now as string));
+  const got: Record<string, unknown> = { state: o.state, rejected: o.rejected };
+  if (o.state !== 'notPublished') Object.assign(got, { recordName: o.recordName, published: o.published });
+  if (o.state === 'published') {
+    got.cardHex = hex(o.cardBytes);
+    if (o.photoError) got.photoError = o.photoError;
+    if (o.photo) got.photoSha256 = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', Uint8Array.from(o.photo))));
+  } else {
+    got.error = ERRORS[o.state];
+  }
+  return JSON.stringify(got, Object.keys(got).sort());
+}
+
+function readerExpected(c: Case): string {
+  const want: Record<string, unknown> = { state: c.state, rejected: c.rejected };
+  for (const k of ['recordName', 'published', 'cardHex', 'photoError', 'photoSha256', 'error']) if (c[k] !== undefined) want[k] = c[k];
+  return JSON.stringify(want, Object.keys(want).sort());
+}
+
+const version = (vectors as { version: number }).version;
+// SPEC15R2: version 1 (pinned until 8b2 merges) has no reader cases; version 2 has at least 40.
+kind('reader', version >= 2 ? 40 : 0, reader, readerExpected);

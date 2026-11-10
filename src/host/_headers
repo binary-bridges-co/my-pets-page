@@ -1,6 +1,7 @@
-# Response headers (docs/DESIGN.md §8), read by Cloudflare Pages and Netlify. Checked by
+# Response headers (docs/DESIGN.md §8), read by Cloudflare Pages (Netlify: drop the `!` line). Checked by
 # scripts/check-headers.mjs against the local preview, the Pages preview and production.
 /*
+  ! Access-Control-Allow-Origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
@@ -10,6 +11,12 @@
   X-Robots-Tag: noindex, nofollow, noarchive
   Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src https://api.apple-cloudkit.com; font-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+
+# Pages joins a header that two matching rules set, so each Cache-Control has its own paths.
+/
+  Cache-Control: no-cache
+
+/p/*
   Cache-Control: no-cache
 
 /assets/*
