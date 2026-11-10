@@ -1,0 +1,6 @@
+{
+  "comment": "Preview deploys (my-pets-page.pages.dev) read the development environment. PLACEHOLDER until go-live (docs/RUNBOOK.md).",
+  "containerId": "iCloud.co.binarybridges.pets",
+  "environment": "development",
+  "apiToken": "PLACEHOLDERDEVELOPMENTTOKEN"
+}
