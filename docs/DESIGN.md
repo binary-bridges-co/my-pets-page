@@ -150,11 +150,11 @@ Team ID `9JB56TN367` (Binary Bridges SAS), bundle id `co.binarybridges.pets` (ow
 
 ## 10. Hosting
 
-Cloudflare Pages on the free plan (owner, 5 Nov 2026), deployed from `dist/`. `_redirects` holds the one rewrite, `/p/*  /p/index.html  200`; Pages serves `404.html` for anything else. Web Analytics stays **off** (it injects a script). The custom domain `pets.binarybridges.co` is a CNAME to the project's `pages.dev` name at Namecheap; no nameserver move. Step by step: `docs/RUNBOOK.md`.
+Cloudflare Pages on the free plan (owner, 5 Nov 2026), built from this repository by Pages' Git integration (`docs/RUNBOOK.md`). `_redirects` holds the one rewrite, `/p/*  /p/  200` (Pages answers 404 for a rewrite to `/p/index.html`); Pages serves `404.html` for anything else. Pages adds `Access-Control-Allow-Origin: *` to static files by default; `_headers` detaches it. Web Analytics stays **off** (it injects a script). The custom domain `pets.binarybridges.co` is a CNAME to the project's `pages.dev` name at Namecheap; no nameserver move. Step by step: `docs/RUNBOOK.md`.
 
 Portability: `npm run build -- --host=github-pages` writes the same files plus a `<meta>` CSP (without `frame-ancestors`, which a meta tag can't carry) and a `404.html` that is the page itself, since GitHub Pages has neither headers nor rewrites. Netlify reads the same `_headers` and `_redirects`.
 
-`npm run preview` serves `dist/` locally with the same `_headers` and `_redirects` rules, and the browser tests and the header check run against it.
+`npm run preview` serves `dist/` locally with the same `_headers` and `_redirects` rules, and the browser tests and the header check run against it. `npm run check:pages` runs the same header check against `wrangler pages dev` (Cloudflare's own local emulation of Pages, no account), so CI checks the host's real rules too.
 
 ## 11. Threats
 

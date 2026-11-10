@@ -34,6 +34,10 @@ jobs:
         run: npm run test:unit
       - name: Weight budget
         run: npm run check:budget
+      - name: Headers, rewrite, 404 and AASA on the local preview
+        run: npm run check:headers
+      - name: The same on Cloudflare's local Pages emulation
+        run: npm run check:pages
       - name: The GitHub Pages fallback builds too
         run: node scripts/build.mjs --host=github-pages && npm run check:budget
 

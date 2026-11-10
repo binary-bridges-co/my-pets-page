@@ -21,3 +21,8 @@
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# Apple's CDN fetches this file: JSON, no redirect (docs/DESIGN.md §9).
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: max-age=3600
