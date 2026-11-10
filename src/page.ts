@@ -61,11 +61,25 @@ async function start(): Promise<void> {
   document.body.dataset.lookup = outcome.state;
   if (outcome.state === 'deactivated') showNotice(main, 'deactivated', s.deactivated, s, true);
   else if (outcome.state === 'published') {
-    showPublished(main, outcome.card, Date.parse(outcome.published), Date.now(), s, photoView(outcome));
+    const photo = photoView(outcome);
+    showPublished(main, outcome.card, Date.parse(outcome.published), Date.now(), s, photo);
+    if (photo) {
+      const img = main.querySelector('img.photo');
+      const revoke = (): void => URL.revokeObjectURL(photo.url);
+      img?.addEventListener('load', revoke, { once: true });
+      img?.addEventListener('error', revoke, { once: true });
+    }
     wireSendWhere();
+  } else if (outcome.state === 'unpublished') {
+    // §15.8 r2: an unpublish shows nothing; only "not published" falls back to the fragment.
+    showNotice(main, 'bare', s.bare, s);
   } else showFragment(main, fragment, s, 'bare');
 }
 
 start().catch(() => {
+  // Something unexpected after the page started: say we can't show the card, never leave A's text.
   document.body.dataset.lookup = 'error';
+  const main = document.getElementById('card');
+  const s = STRINGS[pickLanguage(navigator.languages?.length ? navigator.languages : [navigator.language])];
+  if (main) showNotice(main, 'unavailable', s.unavailable, s, true);
 });

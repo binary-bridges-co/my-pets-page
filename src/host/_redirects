@@ -1,2 +1,3 @@
-# Every tag link is served by the one page, as a rewrite (status 200), never a redirect.
-/p/*  /p/index.html  200
+# Every tag link is served by the one page, as a rewrite (status 200), never a redirect. Pages
+# answers 404 for a rewrite to /p/index.html, so the target is the folder (checked with wrangler pages dev).
+/p/*  /p/  200

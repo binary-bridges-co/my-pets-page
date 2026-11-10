@@ -49,6 +49,12 @@ test('A: not published, unpublished and forged-only records all show the bare te
   }
 });
 
+test('A: an unpublished link ignores the fragment (§15.8 r2: only "not published" falls back)', async ({ page }) => {
+  await open(page, 'unpublished', 'verified');
+  expect(await state(page)).toBe('bare');
+  expect(await page.content()).not.toContain('Tag Dog');
+});
+
 test('E: a fragment that verifies shows the tag\'s copy, never as published', async ({ page }) => {
   await open(page, 'notFound', 'verified');
   expect(await state(page)).toBe('copy');

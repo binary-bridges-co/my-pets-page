@@ -32,7 +32,8 @@ const headerRules = readRules('_headers', (text) => {
   const rules = [];
   for (const line of text.split('\n')) {
     if (!line.trim() || line.trim().startsWith('#')) continue;
-    if (!/^\s/.test(line)) rules.push({ match: pattern(line.trim()), headers: [] });
+    if (!/^\s/.test(line)) rules.push({ match: pattern(line.trim()), headers: [], detach: [] });
+    else if (line.trim().startsWith('!')) rules.at(-1).detach.push(line.trim().slice(1).trim());
     else {
       const at = line.indexOf(':');
       rules.at(-1).headers.push([line.slice(0, at).trim(), line.slice(at + 1).trim()]);
@@ -61,7 +62,13 @@ function file(path) {
 }
 
 createServer((req, res) => {
-  const path = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+  let path;
+  try {
+    path = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+  } catch {
+    res.writeHead(400).end();
+    return;
+  }
   let served = path.endsWith('/index.html') ? undefined : file(path);
   let status = 200;
   if (!served) {
@@ -73,10 +80,12 @@ createServer((req, res) => {
     served = file('/404.html');
   }
   const headers = { 'Content-Type': TYPES[extname(served)] ?? 'application/octet-stream' };
-  const custom = {};
+  // Pages adds Access-Control-Allow-Origin: * to every static file unless a rule detaches it with `! Name`.
+  const custom = { 'Access-Control-Allow-Origin': '*' };
   for (const rule of headerRules) {
     if (!rule.match.test(path)) continue;
     for (const [name, value] of rule.headers) custom[name] = custom[name] ? `${custom[name]}, ${value}` : value;
+    for (const name of rule.detach) delete custom[name];
   }
   res.writeHead(status, { ...headers, ...custom });
   res.end(req.method === 'HEAD' ? undefined : readFileSync(served));

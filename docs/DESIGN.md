@@ -73,7 +73,7 @@ Then: any accepted `deactivate` → **deactivated**; else the greatest `publishe
 
 | # | State | When | What the visitor sees |
 |---|---|---|---|
-| A | Bare | No JavaScript; or not published or unpublished, with no fragment or a link-only one | "This tag's details are on its NFC chip. Hold your phone to the tag, or call the number engraved on its back." |
+| A | Bare | No JavaScript; unpublished (the fragment is ignored, §15.8 r2); or not published with no fragment or a link-only one | "This tag's details are on its NFC chip. Hold your phone to the tag, or call the number engraved on its back." |
 | B | Published | The reader selected a card without `lost` | "Hi, I'm Luna", the breed line, the photo (from the record's bytes as a `blob:` URL), Call / Message, Important rows, My vet, footer "Published by my family · updated 2 min ago." |
 | C | Published and lost | The selected card has `lost` | B plus the lost band, the Last seen row and Send where I am |
 | D | Deactivated | An accepted `deactivate` | "This tag is no longer active." The fragment is ignored |
@@ -176,7 +176,6 @@ Until `public-card.json` version 2 is merged in the iOS repo and copied here, th
 - an operation beside a `photo` is `record.invalid`; photo bytes beside a card without `photo` are `photo.mismatch`;
 - the 395-day rule and its edge, and a `deactivate` that never ages out;
 - the selection: deactivate first, then the newest, a tie to the operation and then the lower name;
-- "unpublished" falls back to the fragment like "not published".
 
 The page's reader passes every `reader` case of the 8b2 draft (`public-card.json` version 2, 41 cases, run locally against the unmerged file); the pinned copy moves to version 2 when 8b2 merges.
 

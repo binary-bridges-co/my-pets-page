@@ -1,6 +1,7 @@
-# Response headers (docs/DESIGN.md §8), read by Cloudflare Pages and Netlify. Checked by
+# Response headers (docs/DESIGN.md §8), read by Cloudflare Pages (Netlify: drop the `!` line). Checked by
 # scripts/check-headers.mjs against the local preview, the Pages preview and production.
 /*
+  ! Access-Control-Allow-Origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
