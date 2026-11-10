@@ -52,7 +52,7 @@ Record in `docs/DESIGN.md` §3 and as fixtures in `test/support/scenarios.ts`: t
    ```bash
    npm run check:headers -- https://my-pets-page.pages.dev
    ```
-   It must print `check-headers: … checks pass`. (CI already runs the same check against `wrangler pages dev`, Cloudflare's local emulation, and the local preview.) If the only failure is `x-robots-tag` on the `pages.dev` address (Pages may add its own `noindex` there), that is expected; the check on the custom domain in step 3 must pass in full.
+   It must print `check-headers: … checks pass`. (CI already runs the same check against `wrangler pages dev`, Cloudflare's local emulation, and the local preview.) If the only failure is `x-robots-tag` on the `pages.dev` address (Pages may add its own `noindex` there), that is expected; the check on the custom domain in step 3 must pass in full. Run Lighthouse (Chrome DevTools, mobile) on a published and a lost card of the preview once: LCP < 2.5 s, CLS < 0.1, TBT < 200 ms.
 
 ## 3. The custom domain
 

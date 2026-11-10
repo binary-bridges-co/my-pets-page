@@ -24,7 +24,7 @@ export default defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
   webServer: {
-    command: `node scripts/preview.mjs --port=${PORT}`,
+    command: `npm run build --silent && node scripts/preview.mjs --port=${PORT}`,
     url: `http://127.0.0.1:${PORT}/`,
     reuseExistingServer: false,
   },
