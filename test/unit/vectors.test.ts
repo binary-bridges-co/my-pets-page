@@ -83,6 +83,16 @@ function toReaderRecord(r: { name: string; fields: Record<string, VectorField> }
   return { name: r.name, fields };
 }
 
+/** JSON with every object's members sorted, at every depth, so equal values give equal text. */
+function canonical(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${canonical(o[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(v);
+}
+
 const ERRORS: Record<string, string> = { notPublished: 'link.notPublished', unpublished: 'link.unpublished', deactivated: 'link.deactivated' };
 
 /** The reader's outcome in the vector's own terms, so one deepEqual compares every member the case pins. */
@@ -98,15 +108,14 @@ async function reader(c: Case): Promise<string> {
   } else {
     got.error = ERRORS[o.state];
   }
-  return JSON.stringify(got, Object.keys(got).sort());
+  return canonical(got);
 }
 
 function readerExpected(c: Case): string {
   const want: Record<string, unknown> = { state: c.state, rejected: c.rejected };
   for (const k of ['recordName', 'published', 'cardHex', 'photoError', 'photoSha256', 'error']) if (c[k] !== undefined) want[k] = c[k];
-  return JSON.stringify(want, Object.keys(want).sort());
+  return canonical(want);
 }
 
-const version = (vectors as { version: number }).version;
-// SPEC15R2: version 1 (pinned until 8b2 merges) has no reader cases; version 2 has at least 40.
-kind('reader', version >= 2 ? 40 : 0, reader, readerExpected);
+test('public-card.json is version 2 (§15 r2)', () => assert.equal((vectors as { version: number }).version, 2));
+kind('reader', 42, reader, readerExpected);
