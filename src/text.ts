@@ -3,7 +3,7 @@ import type { Strings } from './lang';
 
 /** Fills `{name}` placeholders in one pass, so a filled value is never filled again. */
 export function fill(template: string, args: Readonly<Record<string, string>>): string {
-  return template.replace(/\{([a-z]+)\}/g, (whole, key: string) => (key in args ? (args[key] as string) : whole));
+  return template.replace(/\{([a-z]+)\}/g, (whole, key: string) => (Object.prototype.hasOwnProperty.call(args, key) ? (args[key] as string) : whole));
 }
 
 /** The server's Phones.dialable rule: optional leading +, 3 to 20 digits after the separators a card may use. */
@@ -76,6 +76,7 @@ export function localTime(text: string): LocalTime | undefined {
   if (!m) return undefined;
   const n = m.slice(1).map((x, i) => (i === 5 ? 0 : Number(x)));
   const sign = m[6] === '-' ? -1 : 1;
+  if ((n[1] as number) < 1 || (n[1] as number) > 12 || (n[6] as number) > 14 || (n[7] as number) > 59) return undefined;
   return {
     day: { y: n[0] as number, m: n[1] as number, d: n[2] as number },
     h: n[3] as number,

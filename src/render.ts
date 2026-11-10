@@ -159,7 +159,7 @@ function actions(card: CardView, s: Strings): HTMLElement {
   if (alt) {
     const label = alt.label ? fill(s['alternate.call.label'], { name: alt.name, label: alt.label }) : fill(s['alternate.call'], { name: alt.name });
     if (altPhone) box.append(link(`tel:${altPhone}`, 'button', label));
-    else box.append(el('p', 'phone', `${alt.name}: ${alt.phone ?? ''}`));
+    else box.append(el('p', 'phone', alt.phone ? `${alt.name}: ${alt.phone}` : alt.name));
   }
   return box;
 }

@@ -3,7 +3,8 @@
 //   node scripts/build.mjs [--host=cloudflare|github-pages] [--config=production|development|test]
 import { build } from 'esbuild';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const root = new URL('../', import.meta.url);
 const arg = (name, fallback) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1] ?? fallback;
@@ -26,16 +27,16 @@ mkdirSync(new URL('assets/', dist), { recursive: true });
 const common = { bundle: true, minify: true, legalComments: 'none', logLevel: 'warning', write: false };
 const js = await build({
   ...common,
-  entryPoints: [new URL('src/page.ts', root).pathname],
+  entryPoints: [fileURLToPath(new URL('src/page.ts', root))],
   format: 'iife',
   // BigInt (Ed25519) needs ES2020: Safari 14, Chrome 67, Firefox 68.
   target: ['es2020'],
-  alias: { '@noble/ed25519': new URL('vendor/noble-ed25519/index.js', root).pathname },
+  alias: { '@noble/ed25519': fileURLToPath(new URL('vendor/noble-ed25519/index.js', root)) },
   define: { __CLOUDKIT__: JSON.stringify(config) },
 });
 const css = await build({
   ...common,
-  entryPoints: [new URL('src/page.css', root).pathname],
+  entryPoints: [fileURLToPath(new URL('src/page.css', root))],
   target: ['safari14', 'chrome90', 'firefox90'],
 });
 
@@ -51,7 +52,7 @@ const strings = {
   en: JSON.parse(readFileSync(new URL('src/strings/en.json', root), 'utf8')),
   es: JSON.parse(readFileSync(new URL('src/strings/es.json', root), 'utf8')),
 };
-const escape = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const escape = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 const CSP =
   "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; " +
@@ -92,11 +93,10 @@ write('index.html', page('notice.html', { message: 'home', state: 'home' }));
 // GitHub Pages has no rewrites: every unknown path, /p/<id> included, gets 404.html, so there it is the page.
 write('404.html', host === 'github-pages' ? pageHtml : page('notice.html', { message: 'notATag', state: 'not-a-tag' }));
 write('.nojekyll', '');
+// The host files. Cloudflare Pages and Netlify need _headers (the CSP lives there) and _redirects.
 for (const file of ['_headers', '_redirects', '.well-known/apple-app-site-association']) {
-  try {
-    write(file, readFileSync(new URL(`src/host/${file}`, root)));
-  } catch (e) {
-    if (e.code !== 'ENOENT') throw e;
-  }
+  const source = new URL(`src/host/${file}`, root);
+  if (existsSync(source)) write(file, readFileSync(source));
+  else if (host === 'cloudflare' && file === '_headers') throw new Error(`src/host/${file} is missing`);
 }
 console.log(`build: dist/ for ${host} (${configName}): assets/${jsFile}, assets/${cssFile}`);

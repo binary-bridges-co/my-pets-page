@@ -14,6 +14,17 @@ test('both languages have the same keys and no empty string', () => {
   assert.equal(es.months.split(',').length, 12);
 });
 
+test('the location message has its place placeholder in both languages', () => {
+  for (const s of [en, es]) {
+    assert.ok(s['where.message'].includes('{where}'));
+    assert.ok(s['where.message'].includes('{name}'));
+  }
+});
+
+test('fill ignores inherited names', () => {
+  assert.equal(fill('{constructor}', {}), '{constructor}');
+});
+
 test('the privacy line is the owner wording (Q-R2-2)', () => {
   assert.equal(en.privacy, "My Pets doesn't know when the tag is scanned. Like any website, the page's host and Apple's iCloud see the visitor's internet address.");
 });
@@ -70,4 +81,6 @@ test('since and last seen are judged in the offset they were written in', () => 
   assert.ok(tokyo);
   assert.equal(seen(tokyo, NOW, en), 'yesterday, 12:00 PM');
   assert.equal(localTime('2026-11-04T06:10:00Z'), undefined);
+  assert.equal(localTime('2026-13-04T06:10:00-05:00'), undefined);
+  assert.equal(localTime('2026-11-04T06:10:00+15:00'), undefined);
 });
