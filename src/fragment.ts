@@ -4,8 +4,7 @@
 // `1.` + base64url(card ‖ salt 16 ‖ key 32 ‖ sig 64), or `1.` + base64url(salt 16) for link only;
 // the card is signed under `mypets/tag-card/v1`, never the server card's tag.
 import { keyPassesRules, verifyStrict } from './ed25519';
-import { CardRefusal, checkChipCard, type ChipCard } from './chipCard';
-import { parseCanonical } from './jcs';
+import { type ChipCard, checkChipCard, readSigned } from './card';
 
 export type FragmentResult =
   | { kind: 'linkOnly' }
@@ -17,7 +16,6 @@ const CHIP_TAG = 'mypets/tag-card/v1';
 const SALT = 16;
 const KEY = 32;
 const SIG = 64;
-const MAX_CARD_BYTES = 4096;
 const B64URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const LINK_ID = /^[0-9A-HJKMNP-TV-Z]{4}(-[0-9A-HJKMNP-TV-Z]{4}){4}$/;
@@ -103,12 +101,5 @@ export async function readFragment(fragment: string, linkId: string): Promise<Fr
 
 /** A chip card's signed bytes: canonical JCS, at most 4096 bytes, §15.3 without `lost` and `photo`; else its code. */
 export function readChipCard(bytes: Uint8Array): ChipCard | string {
-  const parsed = parseCanonical(bytes);
-  if (parsed === undefined) return 'card.notCanonical';
-  try {
-    const card = checkChipCard(parsed);
-    return bytes.length > MAX_CARD_BYTES ? 'card.invalid' : card;
-  } catch (e) {
-    return e instanceof CardRefusal ? e.message : 'card.invalid';
-  }
+  return readSigned(bytes, checkChipCard);
 }

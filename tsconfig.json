@@ -15,5 +15,5 @@
       "@noble/ed25519": ["./vendor/noble-ed25519/index.d.ts"]
     }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "playwright.config.ts"]
 }

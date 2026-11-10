@@ -14,11 +14,17 @@
     "build": "npm run check:vendor && npm run typecheck && node scripts/build.mjs",
     "test:unit": "node scripts/build-tests.mjs && node --test --test-reporter=spec build/test/*.test.mjs",
     "check:budget": "node scripts/check-budget.mjs",
-    "test": "npm run test:unit"
+    "test": "npm run test:unit",
+    "fixtures": "node scripts/gen-fixtures.mjs",
+    "preview": "node scripts/preview.mjs",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
     "esbuild": "0.28.1",
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@playwright/test": "1.63.0"
   }
 }

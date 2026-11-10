@@ -10,6 +10,12 @@
   X-Robots-Tag: noindex, nofollow, noarchive
   Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src https://api.apple-cloudkit.com; font-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+
+# Pages joins a header that two matching rules set, so each Cache-Control has its own paths.
+/
+  Cache-Control: no-cache
+
+/p/*
   Cache-Control: no-cache
 
 /assets/*

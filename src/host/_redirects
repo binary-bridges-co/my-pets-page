@@ -1,0 +1,2 @@
+# Every tag link is served by the one page, as a rewrite (status 200), never a redirect.
+/p/*  /p/index.html  200
