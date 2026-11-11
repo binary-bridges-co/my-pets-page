@@ -19,6 +19,8 @@ export interface Lost {
   since: LocalTime;
   area?: string;
   description?: string;
+  /** The family's words to the finder (Spec §15.3 r3), shown as a quote, plain text only. */
+  message?: string;
   lastSeenLabel?: string;
   lastSeenAt?: LocalTime;
 }
@@ -122,6 +124,11 @@ function lostBand(lost: Lost, nowMs: number, s: Strings): HTMLElement {
   const line = lost.area ? fill(s['lost.line.area'], { since: when, area: lost.area }) : fill(s['lost.line'], { since: when });
   band.append(h2, el('p', undefined, line));
   if (lost.description) band.append(el('p', 'lost-description', lost.description));
+  if (lost.message) {
+    const said = el('figure', 'lost-message');
+    said.append(el('figcaption', undefined, s['lost.message.label']), el('blockquote', undefined, fill(s['lost.message'], { message: lost.message })));
+    band.append(said);
+  }
   return band;
 }
 

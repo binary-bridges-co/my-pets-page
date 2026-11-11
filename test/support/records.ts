@@ -82,6 +82,8 @@ export interface CardOptions {
   published: string;
   name?: string;
   lost?: boolean;
+  /** `lost.message` (Spec §15.3 r3): makes the card lost and its `v` 2. */
+  message?: string;
   photoSha256?: string;
   phone?: string;
 }
@@ -101,14 +103,16 @@ export function card(o: CardOptions): Record<string, unknown> {
     microchip: '000000000000001',
   };
   if (o.photoSha256) c.photo = { sha256: o.photoSha256, w: 64, h: 48 };
-  if (o.lost) {
+  if (o.lost || o.message !== undefined) {
     c.lost = {
       since: '2026-11-04T06:10:00-05:00',
       area: 'Test Park',
       description: 'Red collar',
       lastSeen: { label: 'near the gate', at: '2026-11-04T06:40:00-05:00' },
+      ...(o.message !== undefined ? { message: o.message } : {}),
     };
   }
+  if (o.message !== undefined) c.v = 2;
   return c;
 }
 

@@ -2,7 +2,7 @@
 
 Status: proposal, 9 Nov 2026. A static site: one HTML page, one stylesheet and one script, on a free host.
 Plan: `.claude/PRPs/plans/phase-8-static-page.plan.md` in `binary-bridges-co/my-pets-ios` (umbrella § "Amendment round 2").
-Contract: Spec §15 revision 2 (`Spec/envelope-v1.md` §15.7–§15.12) and `Spec/vectors/public-card.json` version 2, copied here with a pinned commit (`test/spec/SPEC_SOURCE`). §15 r2 merged in the iOS repo on 10 Nov 2026 (8b2, iOS PR #176, vectors at `3b58a938`); the page's reader runs all its `reader` cases (§12).
+Contract: Spec §15 revision 3 (`Spec/envelope-v1.md` §15.3 r3 and §15.7–§15.12 r2) and `Spec/vectors/public-card.json` version 3, copied here with a pinned commit (`test/spec/SPEC_SOURCE`). §15 r2 merged in the iOS repo on 10 Nov 2026 (8b2, iOS PR #176, vectors at `3b58a938`); r3 (11 Nov 2026, #166 (iOS)) adds the card's `v` 2 with `lost.message`, vectors at `35f790dd`. The page's reader runs all its `reader` cases (§12).
 
 Reused from the archived Kotlin server (`binary-bridges-co/my-pets-server`): the page design, its states and strings in English and Spanish, the stylesheet, the fragment reader and the cofactorless Ed25519 verifier on vendored `@noble/ed25519`, and the server's DESIGN §7 (states, budget), §8 (headers), §10 (app links) and §12 (threats T5, T6, T8). Everything server-only (controllers, Postgres, rate limits, Traefik) is gone.
 
@@ -76,7 +76,7 @@ Then: any accepted `deactivate` → **deactivated**; else the greatest `publishe
 |---|---|---|---|
 | A | Bare | No JavaScript; unpublished (the fragment is ignored, §15.8 r2); or not published with no fragment or a link-only one | "This tag's details are on its NFC chip. Hold your phone to the tag, or call the number engraved on its back." |
 | B | Published | The reader selected a card without `lost` | "Hi, I'm Luna", the breed line, the photo (from the record's bytes as a `blob:` URL), Call / Message, Important rows, My vet, footer "Published by my family · updated 2 min ago." |
-| C | Published and lost | The selected card has `lost` | B plus the lost band, the Last seen row and Send where I am |
+| C | Published and lost | The selected card has `lost` | B plus the lost band, the Last seen row and Send where I am. A `v` 2 card's `lost.message` (§15.3 r3) is quoted in the band under "My family says:", as plain text |
 | D | Deactivated | An accepted `deactivate` | "This tag is no longer active." The fragment is ignored |
 | E | The tag's copy | Not published (or the lookup failed) and a fragment that verifies | The copy, "Details on the tag · written 2 Oct. My Pets hasn't checked who wrote them." No lost band, never "Published by" |
 | F | Refused fragment | Not published (or the lookup failed) and a fragment that fails | "These details don't match this tag's link", then A's text; nothing from the fragment |
@@ -169,17 +169,17 @@ Portability: `npm run build -- --host=github-pages` writes the same files plus a
 | T18 | The token is abused | It reads only what is public by link; the World role can't write; Allowed Origins stops other sites embedding it | Scripts can read records by name, as anyone can |
 | T19 | Supply chain | No runtime dependency but the vendored, hash-pinned `@noble/ed25519`; dev tools pinned exactly; actions pinned by SHA | Standard |
 
-## 12. Spec §15 r2
+## 12. Spec §15 r3
 
-`test/spec/public-card.json` is my-pets-ios `3b58a938:Spec/vectors/public-card.json` (version 2, 126 cases), pinned by SHA-256 in `test/spec/SPEC_SOURCE` and checked in CI (`npm run check:spec`; `IOS_REPO=<checkout>` also compares the bytes). `test/unit/vectors.test.ts` runs its 16 signature, 10 fragment, 25 card and 42 reader cases through the page's own code (the other 33 cases, secrets, link ids, NDEF and layout, are for writers). The page was built against the round-2 plan and the 8b2 draft with `SPEC15R2` markers; the merged vectors settled every one (the record table and eight names, the body shape picking the tag, a photo beside an operation, the 395-day rule with a `deactivate` never ageing out, the selection, and "unpublished" not falling back to the fragment), and the markers are gone. No disagreement between §15 r2 and its vectors was found.
+`test/spec/public-card.json` is my-pets-ios `35f790dd:Spec/vectors/public-card.json` (version 3, 135 cases), pinned by SHA-256 in `test/spec/SPEC_SOURCE` and checked in CI (`npm run check:spec`; `IOS_REPO=<checkout>` also compares the bytes). `test/unit/vectors.test.ts` runs its 16 signature, 10 fragment, 32 card and 44 reader cases through the page's own code (the other 33 cases, secrets, link ids, NDEF and layout, are for writers). The page was built against the round-2 plan and the 8b2 draft with `SPEC15R2` markers; the merged vectors settled every one (the record table and eight names, the body shape picking the tag, a photo beside an operation, the 395-day rule with a `deactivate` never ageing out, the selection, and "unpublished" not falling back to the fragment), and the markers are gone. No disagreement between §15 r2 and its vectors was found. Revision 3 (card `v` 1, or `v` 2 exactly when it has `lost.message`, a text 200; any other integer `v` is `card.unsupportedVersion`, a mismatch `card.invalid`; chip cards, fragments and operations stay `v` 1) replaced `card_version_2` with `card_version_3` and added the message cases; the page passes all of them.
 
-When §15 changes: copy the new file, update `SPEC_SOURCE` (commit and SHA-256), run `npm test`.
+When §15 changes: copy the new file, update `SPEC_SOURCE` (commit and SHA-256), run `npm test`. If the change adds something the page shows, add a scenario in `test/support/scenarios.ts` (at the end, so the other scenarios' keys stay the same), run `npm run fixtures` and commit `test/fixtures/scenarios.json`.
 
 ## 13. Tests
 
-- **Unit** (`npm test`, Node's test runner on esbuild bundles): the Spec vectors (`test/unit/vectors.test.ts`), the reader on synthetic records (`reader.test.ts`), `cloudkit.ts` on answers shaped from the reference (`cloudkit.test.ts`), dates and languages (`text.test.ts`), and that the committed browser fixtures are current (`fixtures.test.ts`).
+- **Unit** (`npm test`, Node's test runner on esbuild bundles): the Spec vectors (`test/unit/vectors.test.ts`), the reader on synthetic records (`reader.test.ts`), the lost band's message on a fake DOM (`render.test.ts`), `cloudkit.ts` on answers shaped from the reference (`cloudkit.test.ts`), dates and languages (`text.test.ts`), and that the committed browser fixtures are current (`fixtures.test.ts`).
 - **Browser** (`npm run test:e2e`, Playwright on Chromium, Firefox and WebKit): the built `dist/` served by `scripts/preview.mjs` with the host's `_headers` and `_redirects`. CloudKit is answered from `test/fixtures/scenarios.json` (generated by `npm run fixtures` from `test/support/scenarios.ts`, synthetic keys); every other request that leaves the preview is aborted. Every test fails on a CSP violation. The specs:
-  - `states.spec.ts`: every state A–H, a published card over the fragment, deactivated and unpublished ignoring it, the newest state across names, a failed photo left out, hostile text, Spanish;
+  - `states.spec.ts`: every state A–H, a lost card's message in English and Spanish, a published card over the fragment, deactivated and unpublished ignoring it, the newest state across names, a failed photo left out, hostile text, Spanish;
   - `privacy.spec.ts`: exactly one request leaves the site (the lookup, a CORS-simple POST with no preflight, no referrer, no cookie), the fragment in no URL or body, no cookie, `localStorage`, `sessionStorage`, IndexedDB or service worker use, only own assets, and the built script's only network call and only `https://` origin are CloudKit's;
   - `where.spec.ts`: Send where I am with a mocked location, in English and Spanish, with no request after the tap;
   - `nojs.spec.ts`: JavaScript off shows state A in both languages, the 404 notice and the home;
@@ -188,4 +188,4 @@ When §15 changes: copy the new file, update `SPEC_SOURCE` (commit and SHA-256),
 - **Host** (`npm run check:headers`, `npm run check:pages`): DESIGN §8–§10 on the local preview and on `wrangler pages dev`.
 - **Budget** (`npm run check:budget`): §7, plus a CSP with Trusted Types in the built output.
 
-Not automated: Lighthouse's timings (the plan's LCP, CLS, INP and TBT targets). The page is one 0.7 KB HTML file, 1.5 KB of CSS and 13 KB of JS gzipped, with no font or third-party request; a Lighthouse run on the Pages preview is part of the go-live checks.
+Not automated: Lighthouse's timings (the plan's LCP, CLS, INP and TBT targets). The page is one 0.7 KB HTML file, 1.6 KB of CSS and 13 KB of JS gzipped, with no font or third-party request; a Lighthouse run on the Pages preview is part of the go-live checks.

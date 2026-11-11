@@ -1,9 +1,11 @@
-// The reader (§15.8 r2) on synthetic records. Until public-card.json version 2 is pinned, these are the
+// The reader (§15.8 r2, with the §15.3 r3 card) on synthetic records. Until public-card.json version 2 is pinned, these are the
 // reader's tests; afterwards they stay beside the Spec's reader cases (vectors.test.ts).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { checkJpeg } from '../../src/jpeg';
 import { type Outcome, readRecords, recordNames } from '../../src/reader';
+import { readChipCard } from '../../src/fragment';
+import { jcs } from '../../src/jcs';
 import { CHIP_TAG, card, jpeg, operation, PHOTO, record, sha256Hex, tagKey, utf8 } from '../support/records';
 
 const NOW = Date.parse('2026-11-04T23:15:00.000Z');
@@ -85,7 +87,8 @@ test('forged, borrowed and mis-tagged records are refused with their §15.4 code
     [record(owner, n0, operation('unpublish', id, T(5)), { tag: 'mypets/public-card/v1' }), 'sig.invalid'],
     [record(owner, n0, operation('deactivate', other.id, T(5))), 'card.invalid'],
     [record(owner, n0, utf8('{"published":"2026-11-04T23:10:00.000Z", "v":1}')), 'card.notCanonical'],
-    [record(owner, n0, { ...card({ published: T(5) }), v: 2 }), 'card.unsupportedVersion'],
+    [record(owner, n0, { ...card({ published: T(5) }), v: 3 }), 'card.unsupportedVersion'],
+    [record(owner, n0, { ...card({ published: T(5) }), v: 0 }), 'card.unsupportedVersion'],
     [record(owner, n0, { ...card({ published: T(5) }), address: 'x' }), 'card.invalid'],
   ];
   for (const [r, code] of cases) assert.deepEqual(rejected(await read(await r)), [`${n0} ${code}`], code);
@@ -156,4 +159,50 @@ test('card text is kept as text', async () => {
   const name = '<img src=x onerror=alert(1)>';
   const o = await read(await record(owner, n0, card({ published: T(5), name })));
   assert.equal(o.state === 'published' && o.card.name, name);
+});
+
+// §15.3 r3: `v` 2 exactly when the card has `lost.message`, a text 200.
+const MESSAGE = "She's shy, please don't chase her. Call us, there's a reward.";
+
+test('a v 2 card with lost.message is published, with the message as signed', async () => {
+  const o = await read(await record(owner, n0, card({ published: T(5), message: MESSAGE })));
+  assert.equal(o.state, 'published');
+  if (o.state !== 'published') return;
+  assert.equal(o.card.lost?.message, MESSAGE);
+  assert.equal(o.card.lost?.description, 'Red collar');
+});
+
+test('a v 1 lost card has no message', async () => {
+  const o = await read(await record(owner, n0, card({ published: T(5), lost: true })));
+  assert.ok(o.state === 'published' && o.card.lost && !('message' in o.card.lost));
+});
+
+test('v and lost.message go together: card.invalid otherwise', async () => {
+  const withMessage = card({ published: T(5), message: MESSAGE });
+  const lostOnly = card({ published: T(5), lost: true });
+  const cases: Record<string, unknown>[] = [
+    { ...withMessage, v: 1 },
+    { ...lostOnly, v: 2 },
+    { ...card({ published: T(5) }), v: 2 },
+  ];
+  for (const body of cases) assert.deepEqual(rejected(await read(await record(owner, n0, body))), [`${n0} card.invalid`], JSON.stringify(body.v));
+});
+
+test('lost.message is text 200: 1 to 200 code points, NFC, no control, bidi or line separator', async () => {
+  const ok = ['m'.repeat(200), '🐕'.repeat(200), 'Ñandú <b>'];
+  for (const message of ok) assert.equal((await read(await record(owner, n0, card({ published: T(5), message })))).state, 'published', message);
+  const bad = ['', 'm'.repeat(201), '🐕'.repeat(201), 'Shy.\nReward', 'Shy.\rReward', 'Tab\there', 'a\u2028b', 'a\u2029b', 'a\u202eb', 'a\u2066b', 'e\u0301', '\u0085'];
+  for (const message of bad) {
+    assert.deepEqual(rejected(await read(await record(owner, n0, card({ published: T(5), message })))), [`${n0} card.invalid`], JSON.stringify(message));
+  }
+  const notText = { ...card({ published: T(5), message: MESSAGE }) };
+  notText.lost = { ...(notText.lost as Record<string, unknown>), message: 42 };
+  assert.deepEqual(rejected(await read(await record(owner, n0, notText))), [`${n0} card.invalid`]);
+});
+
+test('a chip card is never v 2: with or without a message it is card.invalid', async () => {
+  const chip = { v: 1, published: T(5), name: 'Tag Dog', species: 'dog' };
+  assert.notEqual(typeof readChipCard(utf8(jcs(chip))), 'string');
+  assert.equal(readChipCard(utf8(jcs({ ...chip, v: 2 }))), 'card.invalid');
+  assert.equal(readChipCard(utf8(jcs({ ...chip, v: 2, lost: { since: '2026-11-04T06:10:00-05:00', message: MESSAGE } }))), 'card.invalid');
 });

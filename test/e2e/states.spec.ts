@@ -1,5 +1,5 @@
 // Every state of docs/DESIGN.md §5 from the recorded CloudKit answers, in Chromium, Firefox and WebKit.
-import { expect, mainText, NOW, open, state, test } from './support';
+import { expect, fakeNetwork, mainText, NOW, open, state, test } from './support';
 
 test('B: a published card, with its photo from the record\'s bytes', async ({ page }) => {
   await open(page, 'published');
@@ -31,6 +31,17 @@ test('C: a lost card shows the band, Last seen and Send where I am', async ({ pa
   expect(text).toContain('Last seen');
   expect(text).toContain('near the gate · today, 6:40 AM');
   await expect(page.locator('#where')).toBeVisible();
+  await expect(page.locator('.lost-message')).toHaveCount(0);
+});
+
+test('C: a lost card with the family\'s message (§15.3 r3) quotes it in the band, as text', async ({ page }) => {
+  await open(page, 'lostMessage');
+  expect(await state(page)).toBe('lost');
+  const said = page.locator('.lost-band figure.lost-message');
+  await expect(said.locator('figcaption')).toHaveText('My family says:');
+  await expect(said.locator('blockquote')).toHaveText("“She's shy, please don't chase her. Call us, there's a reward.”");
+  await expect(said.locator('a, img, b')).toHaveCount(0);
+  expect(await mainText(page)).toContain("I got lost and they're looking for me");
 });
 
 test('D: deactivated under a successor name wins over a newer card, and ignores the fragment', async ({ page }) => {
@@ -144,5 +155,16 @@ test('Spanish for a Spanish browser', async ({ browser }) => {
   expect(text).toContain('Datos de la placa · escritos el 2 de octubre');
   expect(text).toContain('Llama a mi familia');
   expect(text).toContain('My Pets no sabe cuándo se escanea la placa.');
+  await context.close();
+});
+
+test('Spanish: the family\'s message', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ locale: 'es-CO' });
+  await fakeNetwork(context, baseURL as string, []);
+  const page = await context.newPage();
+  await page.clock.setFixedTime(new Date(NOW));
+  await open(page, 'lostMessage');
+  await expect(page.locator('.lost-message figcaption')).toHaveText('Mi familia dice:');
+  await expect(page.locator('.lost-message blockquote')).toHaveText("«She's shy, please don't chase her. Call us, there's a reward.»");
   await context.close();
 });

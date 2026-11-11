@@ -31,6 +31,8 @@
   "lost.since.date": "Desde el {date}",
   "lost.line": "{since}. Por favor, avísale a mi familia.",
   "lost.line.area": "{since}, cerca de {area}. Por favor, avísale a mi familia.",
+  "lost.message.label": "Mi familia dice:",
+  "lost.message": "«{message}»",
   "important": "Importante",
   "allergy": "Alergia",
   "medication": "Medicamento",

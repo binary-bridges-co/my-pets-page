@@ -1,5 +1,6 @@
-// The card (Spec §15.3) and the operation (§15.4): members, kinds and limits, the text rule with its
-// bidi controls and line separators. A chip card (§15.5) never has `lost` or `photo`.
+// The card (Spec §15.3 r3) and the operation (§15.4): members, kinds and limits, the text rule with its
+// bidi controls and line separators. A card is `v` 1, or `v` 2 exactly when it has `lost.message`
+// (r3). A chip card (§15.5) never has `lost` or `photo`, so it is always `v` 1.
 import type { CardView, Contact, Medication } from './render';
 import { localTime } from './text';
 import { parseCanonical } from './jcs';
@@ -157,13 +158,15 @@ function photo(v: unknown): CardPhoto {
 
 function lost(v: unknown): NonNullable<Card['lost']> {
   if (!isObj(v)) invalid();
-  members(v, ['since', 'area', 'description', 'lastSeen']);
+  members(v, ['since', 'area', 'description', 'message', 'lastSeen']);
   if (!isDateTime(v.since)) invalid();
   const out: NonNullable<Card['lost']> = { since: localTime(v.since) ?? invalid() };
   const area = text(v, 'area', 80, false);
   if (area !== undefined) out.area = area;
   const description = text(v, 'description', 80, false);
   if (description !== undefined) out.description = description;
+  const message = text(v, 'message', 200, false);
+  if (message !== undefined) out.message = message;
   if (v.lastSeen !== undefined) {
     const seen = v.lastSeen;
     if (!isObj(seen)) invalid();
@@ -177,15 +180,16 @@ function lost(v: unknown): NonNullable<Card['lost']> {
   return out;
 }
 
-function version(obj: Obj): void {
-  if (typeof obj.v === 'number' && Number.isInteger(obj.v) && obj.v !== 1) throw new CardRefusal('card.unsupportedVersion');
-  if (obj.v !== 1) invalid();
+/** A known integer `v` ([known]) passes; another integer is card.unsupportedVersion, anything else card.invalid. */
+function version(obj: Obj, known: readonly number[]): void {
+  if (typeof obj.v === 'number' && Number.isInteger(obj.v) && !known.includes(obj.v)) throw new CardRefusal('card.unsupportedVersion');
+  if (!known.includes(obj.v as number)) invalid();
 }
 
 /** Checks a parsed card; throws CardRefusal with the §15.10 code. [chip] refuses `lost` and `photo`. */
 export function checkCard(card: unknown, chip: boolean): Card {
   if (!isObj(card)) invalid();
-  version(card);
+  version(card, [1, 2]);
   members(card, ['v', 'published', 'name', 'species', 'breed', 'phone', 'alternate', 'health', 'vet', 'microchip', 'photo', 'lost']);
   if (!isRecorded(card.published)) invalid();
   if (chip && (card.photo !== undefined || card.lost !== undefined)) invalid();
@@ -214,6 +218,8 @@ export function checkCard(card: unknown, chip: boolean): Card {
   if (chipNumber !== undefined) out.microchip = chipNumber;
   if (card.photo !== undefined) out.photo = photo(card.photo);
   if (card.lost !== undefined) out.lost = lost(card.lost);
+  // §15.3 r3: `v` 2 exactly when the card has `lost.message`.
+  if ((card.v === 2) !== (out.lost?.message !== undefined)) invalid();
   return out;
 }
 
@@ -225,7 +231,7 @@ export function checkChipCard(card: unknown): Card {
 /** §15.4: exactly `{v: 1, op, id, published}`, `op` unpublish or deactivate, `id` an upper-case link id. */
 export function checkOperation(obj: unknown): Operation {
   if (!isObj(obj)) invalid();
-  version(obj);
+  version(obj, [1]);
   members(obj, ['v', 'op', 'id', 'published']);
   if (obj.op !== 'unpublish' && obj.op !== 'deactivate') invalid();
   if (typeof obj.id !== 'string' || !LINK_ID.test(obj.id)) invalid();
