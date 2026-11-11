@@ -5,6 +5,7 @@ import { expect, open, test } from './support';
 const WIDTHS = [320, 375, 768, 1024, 1440, 1920];
 const PAGES: [string, string | undefined][] = [
   ['lostLongName', undefined],
+  ['lostMessageLong', undefined],
   ['published', undefined],
   ['notFound', 'verified'],
   ['notFound', 'forged'],

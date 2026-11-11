@@ -71,5 +71,10 @@ export async function scenarios(): Promise<{ now: string; photoBase64: string; s
   await add('notFound', async (_k, names) => answer(names));
   await add('throttled', async () => ({ status: 429, body: { uuid: 'test', serverErrorCode: 'THROTTLED', reason: 'slow down', retryAfter: 30 } }));
   await add('malformed', async () => ({ body: 'not json' }));
+  // Spec §15.3 r3: a lost card with the family's message (`v` 2), and the longest message at phone width.
+  await add('lostMessage', async (k, names) =>
+    answer(names, await record(k, k.id, card({ published: before(2), message: "She's shy, please don't chase her. Call us, there's a reward.", photoSha256: photoSha }), { photo: PHOTO })),
+  );
+  await add('lostMessageLong', async (k, names) => answer(names, await record(k, k.id, card({ published: before(2), message: 'm'.repeat(200) }))));
   return { now: NOW, photoBase64: toBase64(PHOTO), scenarios: out };
 }

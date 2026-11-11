@@ -55,13 +55,10 @@ for (const [name, fragment] of [
     expect(sent.cookie, 'no cookie').toBeUndefined();
     expect(JSON.parse(lookup?.body ?? '{}')).toEqual({ records: ['', '.1', '.2', '.3', '.4', '.5', '.6', '.7'].map((s) => ({ recordName: `${scenarios[name].id}${s}` })) });
     // The page's own requests: the HTML, one stylesheet, one script, and the photo's blob: at most.
-    // (WebKit reports a navigation with a fragment twice, so the paths are compared as a set.)
-    const own = new Set(fromPage.filter((r) => r.url.startsWith(`${baseURL}/`)).map((r) => new URL(r.url).pathname));
-    expect([...own].sort()).toEqual([
-      expect.stringMatching(/^\/assets\/page\.[0-9a-f]{12}\.css$/),
-      expect.stringMatching(/^\/assets\/page\.[0-9a-f]{12}\.js$/),
-      `/p/${scenarios[name].id}`,
-    ]);
+    // (WebKit reports a navigation with a fragment twice, so the paths are compared as a set. The
+    // content hashes are masked before sorting, so their order doesn't depend on the hash values.)
+    const own = new Set(fromPage.filter((r) => r.url.startsWith(`${baseURL}/`)).map((r) => new URL(r.url).pathname.replace(/^(\/assets\/page\.)[0-9a-f]{12}\./, '$1<hash>.')));
+    expect([...own].sort()).toEqual(['/assets/page.<hash>.css', '/assets/page.<hash>.js', `/p/${scenarios[name].id}`]);
     // The fragment never leaves the page.
     const tag = fragment ? (scenarios[name].fragments as Record<string, string>)[fragment] : undefined;
     if (tag) {

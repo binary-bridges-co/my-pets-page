@@ -157,6 +157,22 @@ h2 {
   font-weight: 600;
 }
 
+/* The family's message (Spec §15.3 r3): a quote set off by a rule in the band's own text colour. */
+.lost-message {
+  margin: 12px 0 0;
+  padding-left: 12px;
+  border-left: 3px solid currentColor;
+}
+
+.lost-message figcaption {
+  font-size: 0.9375rem;
+}
+
+.lost-message blockquote {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
 .actions {
   display: grid;
   gap: 10px;

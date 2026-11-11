@@ -59,7 +59,7 @@ kind('fragment', 10, fragment);
 // A valid card holding `lost` or `photo` is card.invalid on a chip (§15.5).
 kind(
   'card',
-  25,
+  32,
   (c) => {
     const read = readChipCard(new TextEncoder().encode(c.input as string));
     return typeof read === 'string' ? read : 'valid';
@@ -67,7 +67,7 @@ kind(
   (c) => (c.expect === 'valid' && /"(lost|photo)":/.test(c.input as string) ? 'card.invalid' : want(c)),
 );
 
-// §15.8 r2's reader cases (public-card.json version 2): the records of one lookup, as CloudKit fields
+// §15.8 r2's reader cases (public-card.json version 3, §15.3 r3): the records of one lookup, as CloudKit fields
 // with `valueHex` for Bytes, and what the page shows.
 interface VectorField {
   type: string;
@@ -117,5 +117,12 @@ function readerExpected(c: Case): string {
   return canonical(want);
 }
 
-test('public-card.json is version 2 (§15 r2)', () => assert.equal((vectors as { version: number }).version, 2));
-kind('reader', 42, reader, readerExpected);
+test('public-card.json is version 3 (§15 r3)', () => assert.equal((vectors as { version: number }).version, 3));
+kind('reader', 44, reader, readerExpected);
+
+test('the §15.3 r3 cases are there and card_version_2 is gone', () => {
+  const names = new Set(cases.map((c) => c.name));
+  const r3 = ['card_lost_message', 'card_version_3', 'card_message_in_v1', 'card_v2_without_message', 'card_v2_without_lost', 'card_message_empty', 'card_message_201', 'card_message_line_break'];
+  for (const n of [...r3, 'reader_card_with_message', 'reader_card_version_3', 'reader_card_v2_without_message']) assert.ok(names.has(n), n);
+  assert.ok(!names.has('card_version_2') && !names.has('reader_card_version_2'));
+});

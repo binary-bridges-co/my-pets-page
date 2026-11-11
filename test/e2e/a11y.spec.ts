@@ -6,6 +6,7 @@ const STATES: [string, string | undefined][] = [
   ['published', undefined],
   ['hostile', undefined],
   ['lost', undefined],
+  ['lostMessage', undefined],
   ['deactivated', undefined],
   ['notFound', undefined],
   ['notFound', 'verified'],
