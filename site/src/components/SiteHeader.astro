@@ -1,0 +1,129 @@
+---
+import { SITE } from '../content/en';
+
+interface Props {
+  current: 'home' | 'press';
+}
+const { current } = Astro.props;
+const links = [
+  { href: '/#roadmap', label: SITE.nav.roadmap },
+  { href: '/#faq', label: SITE.nav.faq },
+  { href: '/press', label: SITE.nav.press, current: current === 'press' },
+];
+---
+
+<header class="site-header">
+  <a class="skip-link" href="#main">{SITE.skip}</a>
+  <div class="wrap site-header__inner">
+    <a href="/" class="brand" aria-current={current === 'home' ? 'page' : undefined}>
+      <picture>
+        <source srcset="/icon-dark.svg" media="(prefers-color-scheme: dark)" />
+        <img src="/icon.svg" alt="" width="32" height="32" />
+      </picture>
+      <span class="brand__word">{SITE.name}</span>
+    </a>
+    <nav aria-label={SITE.navLabel}>
+      <ul>
+        {
+          links.map((link) => (
+            <li>
+              <a href={link.href} aria-current={link.current ? 'page' : undefined}>
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    border-bottom: 1px solid var(--color-line);
+  }
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-block: 0.5rem;
+  }
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-pill);
+    background: var(--color-accent);
+    color: var(--color-on-fill);
+    font-weight: 550;
+    text-decoration: none;
+    z-index: 10;
+  }
+  .skip-link:not(:focus) {
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 2.75rem;
+    margin-right: auto;
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+  .brand img {
+    display: block;
+    border-radius: var(--radius-box);
+  }
+  .brand__word {
+    font-weight: 620;
+    font-size: 1.0625rem;
+    letter-spacing: -0.02em;
+  }
+  nav ul {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding-inline: 0.625rem;
+    border-radius: var(--radius-pill);
+    color: var(--color-ink);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  nav a:hover {
+    background: color-mix(in oklab, var(--color-ink) 5%, transparent);
+  }
+  nav a[aria-current='page'] {
+    text-decoration: underline;
+    text-decoration-color: var(--color-accent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.35em;
+  }
+  /* A 320 px phone fits the mark and three links, not the word. */
+  @media (max-width: 389px) {
+    .brand__word {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    nav a {
+      padding-inline: 0.5rem;
+    }
+  }
+</style>

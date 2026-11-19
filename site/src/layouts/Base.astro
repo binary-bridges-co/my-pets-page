@@ -1,0 +1,61 @@
+---
+// Every page's document: the head (title, description, canonical, Open Graph, theme-color read from the
+// pinned tokens, the icon, one font preload, Apple's Smart App Banner once there is a listing), the
+// header, main and footer. No script of any kind.
+import geistLatin from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
+import tokensCss from '../styles/tokens.css?raw';
+import '../styles/global.css';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import { config } from '../config/current';
+import { SITE } from '../content/en';
+import { metaCsp } from '../lib/csp';
+import { sitePrivacyLine, smartAppBanner } from '../lib/launch';
+import { themeColors } from '../lib/tokens';
+
+interface Props {
+  title: string;
+  description: string;
+  path: '/' | '/press';
+  current: 'home' | 'press';
+  /** Whether the footer carries the site's privacy line (the homepage shows it in its privacy section). */
+  footerPrivacy?: boolean;
+}
+
+const { title, description, path, current, footerPrivacy = true } = Astro.props;
+const canonical = new URL(path, SITE.url).href;
+const theme = themeColors(tokensCss);
+const banner = smartAppBanner(config);
+const githubPages = process.env.PETS_HOST === 'github-pages';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {githubPages && <meta http-equiv="Content-Security-Policy" content={metaCsp()} />}
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="light dark" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="theme-color" content={theme.light} media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content={theme.dark} media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
+    {banner && <meta name="apple-itunes-app" content={banner} />}
+  </head>
+  <body>
+    <SiteHeader current={current} />
+    <main id="main">
+      <slot />
+    </main>
+    <SiteFooter privacyLine={footerPrivacy ? sitePrivacyLine(config) : undefined} />
+  </body>
+</html>

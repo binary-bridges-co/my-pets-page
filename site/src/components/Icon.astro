@@ -1,0 +1,37 @@
+---
+/**
+ * Line icons, drawn inline (no icon font, no emoji). Always decorative: the label beside it carries the
+ * meaning. Ported from bb-homepage src/components/ui/Icon.astro at e687520 (the UI set only, plus `plus`
+ * for the FAQ rows and `download` for the press kit, drawn on the same 24px grid and 1.75 stroke).
+ */
+type Name = 'arrow-right' | 'arrow-down' | 'external' | 'plus' | 'download';
+
+interface Props {
+  name: Name;
+  size?: number;
+  class?: string;
+}
+
+const PATHS: Readonly<Record<Name, string>> = {
+  'arrow-right': 'M5 12h14M13 6l6 6-6 6',
+  'arrow-down': 'M12 5v14M6 13l6 6 6-6',
+  external: 'M7 17 17 7M9 7h8v8',
+  plus: 'M12 5v14M5 12h14',
+  download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
+};
+
+const { name, size = 18, class: className } = Astro.props;
+---
+
+<svg
+  class={className}
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.75"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  focusable="false"><path d={PATHS[name]}></path></svg>

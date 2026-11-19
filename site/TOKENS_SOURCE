@@ -1,0 +1,3 @@
+binary-bridges-co/bb-context 55edc0d52dd2aa58cfa28015a0cf313deb4c7b05 dist/tailwind-v4/theme.css sha256=d2fdb84409b66ed5e374e9ea6f68adeccddb3f4fa124949b12d65fe3aa87afcd site/src/styles/tokens.css
+binary-bridges-co/bb-context 55edc0d52dd2aa58cfa28015a0cf313deb4c7b05 assets/app-icons/my-pets-bridge-cat-light.svg sha256=da0c64f6b86e2de5172c1e61016d512caefe57ac578d21da0e5eb2e0b2e1995f site/public/icon.svg
+binary-bridges-co/bb-context 55edc0d52dd2aa58cfa28015a0cf313deb4c7b05 assets/app-icons/my-pets-bridge-cat-dark.svg sha256=d76fb3ff9c900755346f118e8295d608f5d1e286a6067cd4697fb279b5c69b36 site/public/icon-dark.svg

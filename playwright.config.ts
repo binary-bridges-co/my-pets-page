@@ -4,6 +4,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4173;
+// PETS_LAUNCH=fixture serves the launch fixture build (the pre-order state), for the home specs.
+const build = process.env.PETS_LAUNCH === 'fixture' ? 'node scripts/build.mjs --launch=fixture' : 'npm run build --silent';
 
 export default defineConfig({
   testDir: 'test/e2e',
@@ -24,7 +26,7 @@ export default defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
   webServer: {
-    command: `npm run build --silent && node scripts/preview.mjs --port=${PORT}`,
+    command: `${build} && node scripts/preview.mjs --port=${PORT}`,
     url: `http://127.0.0.1:${PORT}/`,
     reuseExistingServer: false,
   },

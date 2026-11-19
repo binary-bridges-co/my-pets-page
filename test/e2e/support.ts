@@ -15,6 +15,27 @@ const CSP_WATCH =
   "document.addEventListener('securitypolicyviolation', " +
   "e => window.__cspReport(e.violatedDirective + ' ' + e.blockedURI + ' ' + location.pathname), true);";
 
+/** Records every storage call before the page's own code runs. */
+export const STORAGE_WATCH = `
+  window.__storage = [];
+  for (const m of ['setItem', 'getItem', 'removeItem', 'clear', 'key']) {
+    const f = Storage.prototype[m];
+    Storage.prototype[m] = function (...a) { window.__storage.push('Storage.' + m); return f.apply(this, a); };
+  }
+  for (const name of ['localStorage', 'sessionStorage']) {
+    const d = Object.getOwnPropertyDescriptor(window, name);
+    if (d && d.get) Object.defineProperty(window, name, { get() { window.__storage.push(name); return d.get.call(window); }, configurable: true });
+  }
+  for (const name of ['caches', 'cookieStore', 'openDatabase']) {
+    const d = Object.getOwnPropertyDescriptor(window, name) || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window), name);
+    if (d && d.get) Object.defineProperty(window, name, { get() { window.__storage.push(name); return d.get.call(window); }, configurable: true });
+  }
+  if (navigator.storage) for (const m of ['persist', 'estimate', 'getDirectory']) if (navigator.storage[m]) { const f = navigator.storage[m].bind(navigator.storage); navigator.storage[m] = (...a) => { window.__storage.push('storage.' + m); return f(...a); }; }
+  if (window.indexedDB) { const o = indexedDB.open.bind(indexedDB); indexedDB.open = (...a) => { window.__storage.push('indexedDB.open'); return o(...a); }; }
+  const c = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
+  Object.defineProperty(Document.prototype, 'cookie', { get() { window.__storage.push('cookie.get'); return c.get.call(this); }, set(v) { window.__storage.push('cookie.set'); c.set.call(this, v); } });
+`;
+
 export interface Logged {
   url: string;
   method: string;

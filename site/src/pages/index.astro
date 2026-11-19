@@ -1,0 +1,438 @@
+---
+import AppStoreBadge from '../components/AppStoreBadge.astro';
+import PreviewVideo from '../components/PreviewVideo.astro';
+import SectionLabel from '../components/SectionLabel.astro';
+import SiteButton from '../components/SiteButton.astro';
+import Icon from '../components/Icon.astro';
+import Base from '../layouts/Base.astro';
+import { buildDate, config } from '../config/current';
+import { DISCLAIMER, FAQ, HOME, ORIGIN, PRICE, PRIVACY, PROMISE, PROOF_POINTS, ROADMAP } from '../content/en';
+import { badge, priceLines, sitePrivacyLine } from '../lib/launch';
+
+const [before, after] = PROMISE.headline.split(PROMISE.accent) as [string, string];
+const price = priceLines(config, buildDate);
+const pad = (n: number) => String(n).padStart(2, '0');
+---
+
+<Base title={HOME.title} description={HOME.description} path="/" current="home" footerPrivacy={false}>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap hero__grid">
+      <div class="hero__copy">
+        <SectionLabel text={HOME.hero.label} />
+        <h1 id="hero-title" class="hero__title">{before}<em>{PROMISE.accent}</em>{after}</h1>
+        <p class="hero__tail">{PROMISE.tail}</p>
+        <p class="lead muted hero__lead">{HOME.hero.lead}</p>
+        <div class="hero__actions">
+          <AppStoreBadge badge={badge(config)} />
+          <SiteButton href="#roadmap" variant="ghost" icon="arrow-down">{HOME.hero.roadmapLink}</SiteButton>
+        </div>
+      </div>
+      <div class="hero__aside">
+        {
+          config.previewVideo ? (
+            <PreviewVideo video={config.previewVideo} label={HOME.hero.previewCaption} />
+          ) : (
+            <figure class="hero__mark">
+              <picture>
+                <source srcset="/icon-dark.svg" media="(prefers-color-scheme: dark)" />
+                <img src="/icon.svg" alt="" width="224" height="224" />
+              </picture>
+              <figcaption class="section-label">{HOME.hero.previewLater}</figcaption>
+            </figure>
+          )
+        }
+      </div>
+    </div>
+  </section>
+
+  <section id="proof" class="section" aria-labelledby="proof-title">
+    <div class="wrap">
+      <SectionLabel text={HOME.proof.label} />
+      <h2 id="proof-title" class="display section__title">{HOME.proof.heading}</h2>
+      <ol class="proof">
+        {
+          PROOF_POINTS.map((point, i) => (
+            <li class="proof__item">
+              <span class="proof__n" aria-hidden="true">{pad(i + 1)}</span>
+              <p class="section-label">{point.kicker}</p>
+              <p class="proof__text">{point.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section id="price" class="section" aria-labelledby="price-title">
+    <div class="wrap split">
+      <div>
+        <SectionLabel text={HOME.price.label} />
+        <h2 id="price-title" class="display section__title">{HOME.price.heading}</h2>
+        <p class="price__amount" data-amount>{price.amount}</p>
+        <p class="lead">{price.line}</p>
+      </div>
+      <div class="split__side">
+        <p class="lead">{PRICE.coverage}</p>
+        <p class="price__compare">
+          {PRICE.comparison.text}<sup><a href="#price-source" class="footnote-mark" aria-label={`${PRICE.comparison.noteLabel} ${PRICE.comparison.mark}`}>{PRICE.comparison.mark}</a></sup>
+        </p>
+        <p id="price-source" class="price__note muted">
+          <span aria-hidden="true">{PRICE.comparison.mark} </span><span class="sr-only">{PRICE.comparison.noteLabel}: </span>{PRICE.comparison.note}
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy" class="section" aria-labelledby="privacy-title">
+    <div class="wrap split">
+      <div>
+        <SectionLabel text={HOME.privacy.label} />
+        <h2 id="privacy-title" class="display section__title">{HOME.privacy.heading}</h2>
+        <p class="lead">{PRIVACY.body}</p>
+      </div>
+      <aside class="split__side site-note" aria-label={PRIVACY.siteLabel}>
+        <p class="section-label">{PRIVACY.siteLabel}</p>
+        <p>{PRIVACY.site} <span id="site-privacy">{sitePrivacyLine(config)}</span></p>
+      </aside>
+    </div>
+  </section>
+
+  <section id="story" class="section" aria-labelledby="story-title">
+    <div class="wrap">
+      <SectionLabel text={HOME.origin.label} />
+      <h2 id="story-title" class="display section__title">{HOME.origin.heading}</h2>
+      <figure class="story">
+        <blockquote><p>{ORIGIN.story}</p></blockquote>
+        <figcaption class="section-label">{ORIGIN.signature}</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="roadmap" class="section" aria-labelledby="roadmap-title">
+    <div class="wrap">
+      <SectionLabel text={HOME.roadmap.label} />
+      <h2 id="roadmap-title" class="display section__title">{ROADMAP.heading}</h2>
+      <p class="lead muted">{ROADMAP.lead}</p>
+      <div class="roadmap">
+        {
+          ROADMAP.groups.map((group, i) => (
+            <div class="roadmap__group" data-group={group.name} data-first={i === 0 ? '' : undefined}>
+              <h3 class="roadmap__name">{group.name}</h3>
+              <ul>
+                {group.items.map((item) => (
+                  <li>
+                    <span class="roadmap__item">{item.text}</span>
+                    {item.note && <span class="roadmap__note muted">{item.note}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="section" aria-labelledby="faq-title">
+    <div class="wrap split">
+      <div>
+        <SectionLabel text={HOME.faq.label} />
+        <h2 id="faq-title" class="display section__title">{FAQ.heading}</h2>
+      </div>
+      <div class="faq split__side">
+        {
+          FAQ.items.map((item) => (
+            <details>
+              <summary>
+                <span>{item.q}</span>
+                <Icon name="plus" class="faq__icon" />
+              </summary>
+              <p>{item.a === 'DISCLAIMER' ? DISCLAIMER : item.a}</p>
+            </details>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    padding-block: clamp(3rem, 2rem + 5vw, 7rem) calc(var(--spacing-section) / 2);
+  }
+  .hero__grid {
+    display: grid;
+    gap: clamp(2.5rem, 1.5rem + 4vw, 4rem);
+  }
+  .hero__title {
+    margin: 1.25rem 0 0;
+    font-size: var(--text-hero);
+    line-height: var(--text-hero--line-height);
+    font-weight: 640;
+    letter-spacing: -0.045em;
+    text-wrap: balance;
+  }
+  .hero__title em {
+    font-style: normal;
+    color: var(--color-accent);
+  }
+  .hero__tail {
+    margin: 1.5rem 0 0;
+    font-size: var(--text-lead);
+    line-height: var(--text-lead--line-height);
+    font-weight: 600;
+  }
+  .hero__lead {
+    margin: 0.5rem 0 0;
+  }
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin-top: 2rem;
+  }
+  .hero__aside {
+    align-self: end;
+  }
+  .hero__mark {
+    display: grid;
+    gap: 1rem;
+    justify-items: start;
+    margin: 0;
+  }
+  .hero__mark img {
+    display: block;
+    width: clamp(8rem, 6rem + 10vw, 14rem);
+    height: auto;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+  .hero__mark figcaption {
+    max-width: 18rem;
+  }
+
+  .section__title {
+    margin-top: 1rem;
+    max-width: 22ch;
+  }
+
+  .proof {
+    display: grid;
+    gap: 1rem;
+    margin: 2.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .proof__item {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+    padding: clamp(1.25rem, 1rem + 1.5vw, 2rem);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+  .proof__n {
+    font-family: var(--font-mono);
+    font-size: var(--text-lead);
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .proof__text {
+    margin: 0;
+    font-size: var(--text-lead);
+    line-height: 1.35;
+    font-weight: 560;
+    letter-spacing: -0.015em;
+    text-wrap: pretty;
+  }
+  /* The first point is the reason most owners come: it gets the width and the size. */
+  .proof__item:first-child .proof__text {
+    max-width: 30ch;
+    font-size: clamp(1.375rem, 1rem + 1.6vw, 2.25rem);
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+  }
+
+  .split {
+    display: grid;
+    gap: 2rem;
+  }
+  .split__side {
+    align-self: end;
+  }
+  .split p {
+    margin-block: 1rem 0;
+  }
+  .price__amount {
+    font-size: var(--text-display);
+    line-height: 1;
+    font-weight: 650;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .price__compare {
+    font-weight: 560;
+  }
+  /* The footnote mark: small type, a 24 px target (WCAG 2.5.8). */
+  .footnote-mark {
+    display: inline-block;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    margin-left: 0.125rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.5rem;
+    text-align: center;
+    vertical-align: 0.35em;
+  }
+  sup {
+    font-size: inherit;
+    line-height: 0;
+    vertical-align: baseline;
+  }
+  .price__note {
+    font-size: 0.875rem;
+  }
+
+  .site-note {
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+  .site-note p:last-child {
+    margin-top: 0.5rem;
+  }
+
+  .story {
+    margin: 2rem 0 0;
+    max-width: 52rem;
+  }
+  .story blockquote {
+    margin: 0;
+    padding-left: clamp(1rem, 0.5rem + 2vw, 2rem);
+    border-left: 2px solid var(--color-line-strong);
+  }
+  .story blockquote p {
+    margin: 0;
+    font-size: clamp(1.375rem, 1rem + 1.4vw, 2.125rem);
+    line-height: 1.3;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    text-wrap: pretty;
+  }
+  .story figcaption {
+    margin-top: 1.25rem;
+    padding-left: clamp(1rem, 0.5rem + 2vw, 2rem);
+  }
+
+  .roadmap {
+    display: grid;
+    gap: 2rem 1.5rem;
+    margin-top: 2.5rem;
+  }
+  .roadmap__group {
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-line);
+  }
+  /* Now is what ships: a stronger rule, not a colour (state colours are not for the site). */
+  .roadmap__group[data-first] {
+    border-top: 2px solid var(--color-ink);
+  }
+  .roadmap__name {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .roadmap ul {
+    display: grid;
+    gap: 1rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .roadmap li {
+    display: grid;
+    gap: 0.375rem;
+  }
+  .roadmap__item {
+    font-weight: 560;
+    font-size: 1.0625rem;
+    line-height: 1.35;
+  }
+  .roadmap__note {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .faq details {
+    border-bottom: 1px solid var(--color-line);
+  }
+  .faq details:first-child {
+    border-top: 1px solid var(--color-line);
+  }
+  .faq summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3.5rem;
+    padding-block: 0.75rem;
+    font-weight: 560;
+    font-size: 1.0625rem;
+    cursor: pointer;
+    list-style: none;
+  }
+  .faq summary::-webkit-details-marker {
+    display: none;
+  }
+  .faq__icon {
+    flex: none;
+    color: var(--color-muted);
+    transition: transform var(--duration-fast) var(--ease-out-expo);
+  }
+  .faq details[open] .faq__icon {
+    transform: rotate(45deg);
+  }
+  .faq details p {
+    margin: 0 0 1.25rem;
+    max-width: 38rem;
+    color: var(--color-muted);
+    line-height: 1.6;
+  }
+
+  @media (min-width: 768px) {
+    .proof {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .proof__item:first-child {
+      grid-column: 1 / -1;
+    }
+    .roadmap {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .hero__grid {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+      align-items: end;
+    }
+    .split {
+      grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+      gap: clamp(2rem, 1rem + 4vw, 6rem);
+    }
+    .proof {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .roadmap {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+</style>

@@ -1,6 +1,9 @@
 // Serves dist/ locally the way Cloudflare Pages does (docs/DESIGN.md §10), for the browser tests and the
-// header check: _headers rules with splats (a header set by two matching rules is joined with ", ", as
-// Pages does), _redirects 200 rewrites, 404.html for anything else, and no redirects. Local only.
+// header check: _headers rules with splats, applied in order, each removing its `! Name` headers first and
+// then setting its own (a header set by two rules and never removed is joined with ", ", as Pages does);
+// _redirects 200 rewrites; Pages' clean URLs (/press serves press.html; /press.html, /press/ and
+// /index.html redirect with 308 to the clean path); 404.html for anything else. Local only. The order
+// follows wrangler's own Pages emulation (generateResponse and attachHeaders in wrangler-dist/cli.js).
 //   node scripts/preview.mjs [--port=4173] [--dir=dist]
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -16,6 +19,13 @@ const TYPES = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'application/javascript',
   '.json': 'application/json',
+  '.woff2': 'font/woff2',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.mp4': 'video/mp4',
+  '.xml': 'application/xml',
+  '.txt': 'text/plain; charset=utf-8',
   '': 'application/octet-stream',
 };
 
@@ -53,12 +63,35 @@ const rewrites = readRules('_redirects', (text) =>
     }),
 );
 
-function file(path) {
+function asset(path) {
   const full = normalize(join(dir, path));
   if (!full.startsWith(dir)) return undefined;
-  if (existsSync(full) && statSync(full).isFile()) return full;
-  const index = join(full, 'index.html');
-  return existsSync(index) ? index : undefined;
+  return existsSync(full) && statSync(full).isFile() ? full : undefined;
+}
+
+/** Pages' answer for a path: a file to serve, a 308 to a clean path, or the 404 page. */
+function resolve(requested) {
+  const rewrite = rewrites.find((r) => r.match.test(requested));
+  const path = rewrite ? rewrite.to : requested;
+  const serve = (file) => ({ status: 200, file });
+  const redirect = (location) => ({ status: 308, location });
+  const notFound = { status: 404, file: asset('/404.html') };
+  if (path.endsWith('/')) {
+    if (asset(`${path}index.html`)) return serve(asset(`${path}index.html`));
+    if (path.endsWith('/index/')) return redirect(path.slice(0, -'index/'.length));
+    if (asset(path.replace(/\/$/, '.html'))) return redirect(path.slice(0, -1));
+    return notFound;
+  }
+  if (asset(path)) {
+    if (!path.endsWith('.html')) return serve(asset(path));
+    const clean = path.slice(0, -'.html'.length);
+    if (clean.endsWith('/index')) return redirect(clean.replace(/\/index$/, '/'));
+    return asset(clean) ? serve(asset(path)) : redirect(clean);
+  }
+  if (path.endsWith('/index')) return redirect(path.slice(0, -'index'.length));
+  if (asset(`${path}.html`)) return serve(asset(`${path}.html`));
+  if (asset(`${path}/index.html`)) return redirect(`${path}/`);
+  return notFound;
 }
 
 createServer((req, res) => {
@@ -69,24 +102,15 @@ createServer((req, res) => {
     res.writeHead(400).end();
     return;
   }
-  let served = path.endsWith('/index.html') ? undefined : file(path);
-  let status = 200;
-  if (!served) {
-    const rewrite = rewrites.find((r) => r.match.test(path));
-    served = rewrite ? file(rewrite.to) : undefined;
-  }
-  if (!served) {
-    status = 404;
-    served = file('/404.html');
-  }
-  const headers = { 'Content-Type': TYPES[extname(served)] ?? 'application/octet-stream' };
+  const answer = resolve(path);
+  const headers = answer.location ? { Location: answer.location } : { 'Content-Type': TYPES[extname(answer.file)] ?? 'application/octet-stream' };
   // Pages adds Access-Control-Allow-Origin: * to every static file unless a rule detaches it with `! Name`.
   const custom = { 'Access-Control-Allow-Origin': '*' };
   for (const rule of headerRules) {
     if (!rule.match.test(path)) continue;
-    for (const [name, value] of rule.headers) custom[name] = custom[name] ? `${custom[name]}, ${value}` : value;
     for (const name of rule.detach) delete custom[name];
+    for (const [name, value] of rule.headers) custom[name] = custom[name] ? `${custom[name]}, ${value}` : value;
   }
-  res.writeHead(status, { ...headers, ...custom });
-  res.end(req.method === 'HEAD' ? undefined : readFileSync(served));
+  res.writeHead(answer.status, { ...headers, ...custom });
+  res.end(req.method === 'HEAD' || !answer.file ? undefined : readFileSync(answer.file));
 }).listen(port, '127.0.0.1', () => console.log(`preview: http://127.0.0.1:${port}/ serving ${dir}`));
