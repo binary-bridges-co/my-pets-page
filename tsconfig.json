@@ -3,8 +3,14 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node"
+    ],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
@@ -12,8 +18,17 @@
     "skipLibCheck": false,
     "resolveJsonModule": true,
     "paths": {
-      "@noble/ed25519": ["./vendor/noble-ed25519/index.d.ts"]
+      "@noble/ed25519": [
+        "./vendor/noble-ed25519/index.d.ts"
+      ]
     }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "playwright.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "playwright.config.ts",
+    "site/src/lib/**/*.ts",
+    "site/src/config/**/*.ts",
+    "site/src/content/**/*.ts"
+  ]
 }

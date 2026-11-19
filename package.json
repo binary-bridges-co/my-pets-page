@@ -10,7 +10,7 @@
   "scripts": {
     "check:vendor": "node scripts/check-vendor.mjs",
     "check:spec": "scripts/check-spec-source.sh",
-    "typecheck": "tsc --noEmit -p .",
+    "typecheck": "tsc --noEmit -p . && ASTRO_TELEMETRY_DISABLED=1 astro check --root site",
     "build": "npm run check:vendor && npm run typecheck && node scripts/build.mjs",
     "test:unit": "node scripts/build-tests.mjs && node --test --test-reporter=spec build/test/*.test.mjs",
     "check:budget": "node scripts/check-budget.mjs",
@@ -19,13 +19,20 @@
     "preview": "node scripts/preview.mjs",
     "test:e2e": "playwright test",
     "check:headers": "node scripts/check-headers.mjs",
-    "check:pages": "node scripts/check-pages.mjs"
+    "check:pages": "node scripts/check-pages.mjs",
+    "check:tokens": "scripts/check-tokens-source.sh"
   },
   "devDependencies": {
+    "@astrojs/check": "0.9.10",
     "@axe-core/playwright": "4.14.0",
+    "@fontsource-variable/geist": "5.3.0",
+    "@fontsource-variable/geist-mono": "5.3.0",
     "@playwright/test": "1.63.0",
+    "@tailwindcss/vite": "4.3.3",
     "@types/node": "22.20.5",
+    "astro": "7.3.5",
     "esbuild": "0.28.1",
+    "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
     "wrangler": "4.140.0"
   }
