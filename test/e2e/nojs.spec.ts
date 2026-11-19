@@ -15,11 +15,13 @@ test('a tag link shows the bare text in English and Spanish, with the privacy li
   expect(log.some((r) => r.url.startsWith('https://'))).toBe(false);
 });
 
-test('another path is the 404 notice; the home says what the site is', async ({ page }) => {
+test('another path is the 404 notice; the homepage says what My Pets is', async ({ page }) => {
   const missing = await page.goto('/somewhere');
   expect(missing?.status()).toBe(404);
   expect(await page.textContent('main')).toContain("This isn't a My Pets tag link.");
   const home = await page.goto('/');
   expect(home?.status()).toBe(200);
-  expect(await page.textContent('main')).toContain('My Pets helps lost pets get home.');
+  expect(await page.textContent('h1')).toContain('Every dose on time, every record yours.');
+  // Nothing on the homepage needs JavaScript: every section is there.
+  for (const id of ['price', 'privacy', 'roadmap', 'faq']) await expect(page.locator(`#${id}`)).toBeVisible();
 });

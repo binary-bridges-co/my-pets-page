@@ -1,30 +1,10 @@
 // No tracking, no storage, no third party (plan § Acceptance 1–2): every request the page makes is
 // recorded; the only one that leaves the site is the lookup to CloudKit.
 import { readdirSync, readFileSync } from 'node:fs';
-import { expect, open, scenarios, test } from './support';
+import { expect, open, scenarios, STORAGE_WATCH, test } from './support';
 
 const CLOUDKIT = 'https://api.apple-cloudkit.com/';
 
-/** Records every storage call before the page's own code runs. */
-const STORAGE_WATCH = `
-  window.__storage = [];
-  for (const m of ['setItem', 'getItem', 'removeItem', 'clear', 'key']) {
-    const f = Storage.prototype[m];
-    Storage.prototype[m] = function (...a) { window.__storage.push('Storage.' + m); return f.apply(this, a); };
-  }
-  for (const name of ['localStorage', 'sessionStorage']) {
-    const d = Object.getOwnPropertyDescriptor(window, name);
-    if (d && d.get) Object.defineProperty(window, name, { get() { window.__storage.push(name); return d.get.call(window); }, configurable: true });
-  }
-  for (const name of ['caches', 'cookieStore', 'openDatabase']) {
-    const d = Object.getOwnPropertyDescriptor(window, name) || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(window), name);
-    if (d && d.get) Object.defineProperty(window, name, { get() { window.__storage.push(name); return d.get.call(window); }, configurable: true });
-  }
-  if (navigator.storage) for (const m of ['persist', 'estimate', 'getDirectory']) if (navigator.storage[m]) { const f = navigator.storage[m].bind(navigator.storage); navigator.storage[m] = (...a) => { window.__storage.push('storage.' + m); return f(...a); }; }
-  if (window.indexedDB) { const o = indexedDB.open.bind(indexedDB); indexedDB.open = (...a) => { window.__storage.push('indexedDB.open'); return o(...a); }; }
-  const c = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
-  Object.defineProperty(Document.prototype, 'cookie', { get() { window.__storage.push('cookie.get'); return c.get.call(this); }, set(v) { window.__storage.push('cookie.set'); c.set.call(this, v); } });
-`;
 
 for (const [name, fragment] of [
   ['lost', 'verified'],
@@ -90,7 +70,8 @@ test('the built HTML and CSS load nothing from elsewhere', async () => {
   const dist = new URL('../../dist/', import.meta.url);
   const css = readdirSync(new URL('assets/', dist)).filter((f) => f.endsWith('.css')).map((f) => readFileSync(new URL(`assets/${f}`, dist), 'utf8')).join('');
   expect(css).not.toMatch(/url\(|@import/);
-  for (const f of ['p/index.html', 'index.html', '404.html']) {
+  // The homepage (index.html, press.html) has its own stricter checks in home-privacy.spec.ts.
+  for (const f of ['p/index.html', '404.html']) {
     const html = readFileSync(new URL(f, dist), 'utf8');
     expect(html, f).not.toMatch(/https?:|srcset|<form|<iframe|http-equiv="refresh"|<link rel="(pre|dns-)/);
   }
