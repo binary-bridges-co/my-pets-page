@@ -1,0 +1,70 @@
+---
+import Icon from './Icon.astro';
+
+/**
+ * The site's one button look, a pill (bb-context docs/components, SiteButton). Ported from bb-homepage
+ * src/components/ui/Button.astro at e687520: links only (the pages have no form and no script), and
+ * without `band` (this site has no band). `primary` is the single action colour, `ghost` is secondary.
+ */
+interface Props {
+  href: string;
+  variant?: 'primary' | 'ghost';
+  icon?: 'arrow-right' | 'arrow-down' | 'external' | 'download';
+  download?: string | boolean;
+  class?: string;
+}
+
+const { href, variant = 'primary', icon, download, class: className } = Astro.props;
+---
+
+<a href={href} class:list={['btn', `btn--${variant}`, className]} download={download}>
+  <span><slot /></span>
+  {icon && <Icon name={icon} class="btn__icon" />}
+</a>
+
+<style>
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    min-height: 3rem;
+    padding: 0.75rem 1.375rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
+    font-weight: 550;
+    font-size: 0.975rem;
+    letter-spacing: -0.005em;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+      transform var(--duration-fast) var(--ease-out-expo),
+      background-color var(--duration-fast),
+      border-color var(--duration-fast);
+  }
+  .btn:active {
+    transform: translateY(1px) scale(0.99);
+  }
+  .btn__icon {
+    transition: transform var(--duration-fast) var(--ease-out-expo);
+  }
+  .btn:hover .btn__icon {
+    transform: translateX(3px);
+  }
+  .btn--primary {
+    background: var(--color-accent);
+    color: var(--color-on-fill);
+  }
+  .btn--primary:hover {
+    background: color-mix(in oklab, var(--color-accent) 88%, var(--color-ink));
+  }
+  .btn--ghost {
+    background: transparent;
+    color: var(--color-ink);
+    border-color: var(--color-line-strong);
+  }
+  .btn--ghost:hover {
+    border-color: var(--color-accent);
+    background: color-mix(in oklab, var(--color-accent) 6%, transparent);
+  }
+</style>

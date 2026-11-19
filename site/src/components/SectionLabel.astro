@@ -1,0 +1,10 @@
+---
+/** The numbered mono label that opens every section: "02 / Price". Ported from bb-homepage at e687520. */
+interface Props {
+  text: string;
+  class?: string;
+}
+const { text, class: className } = Astro.props;
+---
+
+<p class:list={['section-label', className]}>{text}</p>

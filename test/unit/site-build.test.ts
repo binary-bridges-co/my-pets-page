@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { FIXTURE_DIR, FIXTURE_ID } from '../../site/src/config/launch';
+import { HOME_CSP, metaCsp } from '../../site/src/lib/csp';
 import { themeColors } from '../../site/src/lib/tokens';
 
 const root = process.cwd();
@@ -106,4 +107,18 @@ test('check-no-fixture: a clear failure without dist/, on a fixture build, or wi
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
+});
+
+test('the homepage CSP is one string: the layout, _headers for / and /press, and check-headers agree', () => {
+  const headers = read('src/host/_headers');
+  for (const path of ['/', '/press']) {
+    const rule = headers.split(/\n(?=\S)/).find((r) => r.startsWith(`${path}\n`)) ?? '';
+    assert.ok(rule.includes('! Content-Security-Policy') && rule.includes('! X-Robots-Tag'), `${path} detaches the card CSP and noindex`);
+    assert.ok(rule.includes(`Content-Security-Policy: ${HOME_CSP}\n`), `${path} sets the homepage CSP`);
+  }
+  const check = read('scripts/check-headers.mjs');
+  const quoted = /const HOME_CSP =\n([\s\S]*?);\n/.exec(check)?.[1] ?? '';
+  assert.equal(quoted.split('\n').map((l) => l.trim().replace(/^"|"( \+)?$/g, '')).join(''), HOME_CSP);
+  assert.ok(!metaCsp().includes('frame-ancestors'), 'a meta CSP cannot carry frame-ancestors');
+  assert.match(HOME_CSP, /script-src 'none'/);
 });

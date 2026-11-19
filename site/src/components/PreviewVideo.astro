@@ -1,0 +1,34 @@
+---
+/** The 24-second preview: native controls, no autoplay, no loop, nothing loaded until the visitor asks. */
+import type { Video } from '../lib/launch';
+
+interface Props {
+  video: Video;
+  label: string;
+}
+const { video, label } = Astro.props;
+---
+
+<figure class="preview">
+  <video controls preload="none" playsinline poster={video.poster} width={video.width} height={video.height} aria-label={label}>
+    <source src={video.src} type="video/mp4" />
+  </video>
+  <figcaption class="section-label">{label}</figcaption>
+</figure>
+
+<style>
+  .preview {
+    display: grid;
+    gap: 0.75rem;
+    justify-items: start;
+    margin: 0;
+  }
+  video {
+    display: block;
+    width: min(100%, 18rem);
+    height: auto;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+</style>

@@ -1,3 +1,289 @@
 ---
+import AppStoreBadge from '../components/AppStoreBadge.astro';
+import PreviewVideo from '../components/PreviewVideo.astro';
+import SectionLabel from '../components/SectionLabel.astro';
+import SiteButton from '../components/SiteButton.astro';
+import Base from '../layouts/Base.astro';
+import { buildDate, config } from '../config/current';
+import { DISCLAIMER, ORIGIN, PRESS, SITE } from '../content/en';
+import { badge, formatDate, pressContact, priceLines } from '../lib/launch';
+
+const price = priceLines(config, buildDate);
+const contact = pressContact(config);
+const facts: [string, string][] = [
+  [...PRESS.facts.name],
+  [...PRESS.facts.developer],
+  [...PRESS.facts.platforms],
+  [...PRESS.facts.category],
+  [...PRESS.facts.language],
+  [PRESS.facts.price, price.line],
+  [PRESS.facts.release, config.releaseDate ? formatDate(config.releaseDate) : PRESS.facts.releaseUnknown],
+];
+const hasMedia = config.previewVideo !== null || config.screenshots.length > 0;
 ---
-<html lang="en"><head><title>Press</title></head><body><main><h1>My Pets, for the press.</h1></main></body></html>
+
+<Base title={PRESS.title} description={PRESS.description} path="/press" current="press">
+  <section class="press-hero" aria-labelledby="press-title">
+    <div class="wrap">
+      <SectionLabel text={PRESS.label} />
+      <h1 id="press-title" class="display press-hero__title">{PRESS.heading}</h1>
+      <p class="lead muted">{PRESS.lead}</p>
+      <div class="press-hero__store">
+        <AppStoreBadge badge={badge(config)} />
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="section" aria-labelledby="about-title">
+    <div class="wrap columns">
+      <div>
+        <SectionLabel text={PRESS.sections.about} />
+        <h2 id="about-title" class="press__h2">{PRESS.headings.about}</h2>
+      </div>
+      <div class="prose">
+        {PRESS.about.map((p, i) => <p class:list={{ prose__first: i === 0 }}>{p}</p>)}
+        <p class="muted">{DISCLAIMER}</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="facts" class="section" aria-labelledby="facts-title">
+    <div class="wrap columns">
+      <div>
+        <SectionLabel text={PRESS.sections.facts} />
+        <h2 id="facts-title" class="press__h2">{PRESS.headings.facts}</h2>
+      </div>
+      <dl class="facts">
+        {
+          facts.map(([label, value]) => (
+            <div class="facts__row">
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))
+        }
+        <div class="facts__row">
+          <dt>{PRESS.facts.website}</dt>
+          <dd><a href="/">{SITE.host}</a></dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section id="media" class="section" aria-labelledby="media-title">
+    <div class="wrap columns">
+      <div>
+        <SectionLabel text={PRESS.sections.media} />
+        <h2 id="media-title" class="press__h2">{PRESS.headings.media}</h2>
+      </div>
+      <div class="media">
+        {!hasMedia && <p class="muted">{PRESS.mediaEmpty}</p>}
+        {config.previewVideo && <PreviewVideo video={config.previewVideo} label={PRESS.videoLabel} />}
+        {
+          config.screenshots.length > 0 && (
+            <ul class="shots">
+              {config.screenshots.map((shot) => (
+                <li>
+                  <a href={shot.src}>
+                    <img src={shot.src} alt={shot.alt} width={shot.width} height={shot.height} loading="lazy" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+    </div>
+  </section>
+
+  <section id="icon" class="section" aria-labelledby="icon-title">
+    <div class="wrap columns">
+      <div>
+        <SectionLabel text={PRESS.sections.icon} />
+        <h2 id="icon-title" class="press__h2">{PRESS.headings.icon}</h2>
+      </div>
+      <div class="icon">
+        <picture>
+          <source srcset="/icon-dark.svg" media="(prefers-color-scheme: dark)" />
+          <img src="/icon.svg" alt={PRESS.icon.alt} width="160" height="160" />
+        </picture>
+        <div class="icon__links">
+          <SiteButton href="/icon.svg" variant="ghost" icon="download" download="my-pets-icon-light.svg">{PRESS.icon.light}</SiteButton>
+          <SiteButton href="/icon-dark.svg" variant="ghost" icon="download" download="my-pets-icon-dark.svg">{PRESS.icon.dark}</SiteButton>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="press-privacy" class="section" aria-labelledby="press-privacy-title">
+    <div class="wrap columns">
+      <div>
+        <SectionLabel text={PRESS.sections.privacy} />
+        <h2 id="press-privacy-title" class="press__h2">{PRESS.headings.privacy}</h2>
+      </div>
+      <p class="lead">{PRESS.privacy}</p>
+    </div>
+  </section>
+
+  <section id="developer" class="section" aria-labelledby="developer-title">
+    <div class="wrap columns">
+      <div>
+        <SectionLabel text={PRESS.sections.developer} />
+        <h2 id="developer-title" class="press__h2">{PRESS.headings.developer}</h2>
+      </div>
+      <figure class="note">
+        <blockquote><p class="lead">{ORIGIN.story}</p></blockquote>
+        <figcaption class="section-label">{ORIGIN.signature}</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="contact" class="section" aria-labelledby="contact-title">
+    <div class="wrap columns">
+      <div>
+        <SectionLabel text={PRESS.sections.contact} />
+        <h2 id="contact-title" class="press__h2">{PRESS.headings.contact}</h2>
+      </div>
+      <p id="press-contact" class="lead">
+        {contact.text}{contact.href && <> <a href={contact.href}>{contact.email}</a></>}
+      </p>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .press-hero {
+    padding-block: clamp(3rem, 2rem + 5vw, 6rem) calc(var(--spacing-section) / 2);
+  }
+  .press-hero__title {
+    margin-top: 1.25rem;
+    max-width: 18ch;
+  }
+  .press-hero .lead {
+    margin: 1.25rem 0 0;
+  }
+  .press-hero__store {
+    margin-top: 2rem;
+  }
+  .columns {
+    display: grid;
+    gap: 1.5rem;
+  }
+  .press__h2 {
+    margin: 0.75rem 0 0;
+    font-size: clamp(1.5rem, 1.1rem + 1.2vw, 2rem);
+    line-height: 1.15;
+    font-weight: 620;
+    letter-spacing: -0.025em;
+  }
+  .prose {
+    max-width: 40rem;
+  }
+  .prose p {
+    margin: 0 0 1rem;
+    line-height: 1.65;
+  }
+  .prose .prose__first {
+    font-size: var(--text-lead);
+    font-weight: 600;
+  }
+  .facts {
+    margin: 0;
+    max-width: 40rem;
+  }
+  .facts__row {
+    display: grid;
+    gap: 0.25rem;
+    padding-block: 0.875rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .facts__row:first-child {
+    border-top: 1px solid var(--color-line);
+  }
+  .facts dt {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .facts dd {
+    margin: 0;
+    font-weight: 520;
+  }
+  .facts dd a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+  }
+  .media {
+    display: grid;
+    gap: 2rem;
+  }
+  .media p {
+    margin: 0;
+  }
+  .shots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .shots a {
+    display: block;
+  }
+  .shots img {
+    display: block;
+    width: clamp(8rem, 6rem + 6vw, 11rem);
+    height: auto;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+  .icon {
+    display: grid;
+    gap: 1.5rem;
+    justify-items: start;
+  }
+  .icon img {
+    display: block;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+  }
+  .icon__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .note {
+    margin: 0;
+    max-width: 44rem;
+  }
+  .note blockquote {
+    margin: 0;
+    padding-left: 1.25rem;
+    border-left: 2px solid var(--color-line-strong);
+  }
+  .note blockquote p {
+    margin: 0;
+  }
+  .note figcaption {
+    margin-top: 1rem;
+    padding-left: 1.25rem;
+  }
+  #press-contact {
+    margin: 0;
+  }
+  #press-contact a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+  }
+  @media (min-width: 1024px) {
+    .columns {
+      grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+      gap: clamp(2rem, 1rem + 4vw, 6rem);
+    }
+  }
+</style>
