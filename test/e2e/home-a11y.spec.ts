@@ -40,9 +40,9 @@ test('the first Tab stop is the skip link, visibly focused, and it leads to main
   const focused = page.locator(':focus');
   await expect(focused).toHaveAttribute('href', '#main');
   await expect(focused).toBeInViewport();
-  const outline = await focused.evaluate((a) => getComputedStyle(a));
-  expect(outline.outlineStyle).not.toBe('none');
-  expect(Number.parseFloat(outline.outlineWidth)).toBeGreaterThanOrEqual(2);
+  const outline = await focused.evaluate((a) => ({ style: getComputedStyle(a).outlineStyle, width: getComputedStyle(a).outlineWidth }));
+  expect(outline.style).not.toBe('none');
+  expect(Number.parseFloat(outline.width)).toBeGreaterThanOrEqual(2);
 });
 
 test('reduced motion turns transitions off', async ({ page }) => {

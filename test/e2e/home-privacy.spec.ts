@@ -14,7 +14,8 @@ for (const path of ['/', '/press']) {
     await page.waitForLoadState('networkidle');
     const urls = log.map((r) => r.url).filter((u) => !u.startsWith('about:'));
     expect(urls.length).toBeGreaterThan(1);
-    expect(urls.filter((u) => !u.startsWith(`${baseURL}/`)), 'requests that leave the site').toEqual([]);
+    // WebKit reports the video's media loads as same-origin blob: URLs; anything else must be the site's own.
+    expect(urls.filter((u) => !u.startsWith(`${baseURL}/`) && !u.startsWith(`blob:${baseURL}/`)), 'requests that leave the site').toEqual([]);
     expect(await context.cookies(), 'cookies').toEqual([]);
     expect(await page.evaluate(() => (window as unknown as { __storage: string[] }).__storage)).toEqual([]);
     expect(await page.evaluate(async () => (await indexedDB.databases?.())?.length ?? 0)).toBe(0);
