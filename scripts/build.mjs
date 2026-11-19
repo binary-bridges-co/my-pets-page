@@ -1,16 +1,27 @@
-// Builds dist/ (DESIGN §2): the page, the home and 404 notices, the hashed script and stylesheet, and
-// the host files. Nothing here reaches the network.
-//   node scripts/build.mjs [--host=cloudflare|github-pages] [--config=production|development|test]
+// Builds dist/ (DESIGN §2): first the homepage and /press with Astro (site/), then the card page, the
+// 404 notice, the hashed script and stylesheet, and the host files. Nothing here reaches the network:
+// Astro's telemetry is off before Astro is loaded.
+//   node scripts/build.mjs [--host=cloudflare|github-pages] [--config=production|development|test] [--launch=fixture]
+// --launch=fixture builds the homepage in its pre-order launch state with the test media in dist/fixture/,
+// for CI only (site/src/config/launch.ts). PETS_LAUNCH comes from this flag alone.
 import { build } from 'esbuild';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+
+process.env.ASTRO_TELEMETRY_DISABLED = '1';
 
 const root = new URL('../', import.meta.url);
 const arg = (name, fallback) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1] ?? fallback;
 const host = arg('host', 'cloudflare');
 const configName = arg('config', 'production');
+const launch = arg('launch', '');
 if (!['cloudflare', 'github-pages'].includes(host)) throw new Error(`unknown host ${host}`);
+if (!['', 'fixture'].includes(launch)) throw new Error(`unknown launch ${launch}: only --launch=fixture`);
+if (launch === 'fixture') process.env.PETS_LAUNCH = 'fixture';
+else delete process.env.PETS_LAUNCH;
+// The homepage layout emits its CSP as a meta tag on GitHub Pages, as the card page does.
+process.env.PETS_HOST = host;
 
 const config = JSON.parse(readFileSync(new URL(`config/${configName}.json`, root), 'utf8'));
 for (const key of ['containerId', 'environment', 'apiToken']) {
@@ -22,6 +33,17 @@ if (!/^[A-Za-z0-9]+$/.test(config.apiToken)) throw new Error('apiToken: letters 
 
 const dist = new URL('dist/', root);
 rmSync(dist, { recursive: true, force: true });
+
+// The homepage first: Astro owns and empties its outDir. It writes index.html, press.html, sitemap.xml,
+// robots.txt, _astro/ and site/public/; everything below is the card build's, guarded against collisions.
+const astro = await import('astro');
+await astro.build({ root: fileURLToPath(new URL('site/', root)), outDir: fileURLToPath(dist), logLevel: 'warn' });
+
+/** Fails the build if Astro already wrote a path the card build owns. */
+function guard(file) {
+  if (existsSync(file)) throw new Error(`build: Astro wrote ${fileURLToPath(file)}, which the card build owns`);
+}
+guard(new URL('assets/', dist));
 mkdirSync(new URL('assets/', dist), { recursive: true });
 
 const common = { bundle: true, minify: true, legalComments: 'none', logLevel: 'warning', write: false };
@@ -42,6 +64,7 @@ const css = await build({
 
 function hashed(name, ext, bytes) {
   const file = `${name}.${createHash('sha256').update(bytes).digest('hex').slice(0, 12)}.${ext}`;
+  guard(new URL(`assets/${file}`, dist));
   writeFileSync(new URL(`assets/${file}`, dist), bytes);
   return file;
 }
@@ -83,13 +106,13 @@ function page(template, vars = {}) {
 
 function write(path, text) {
   const file = new URL(path, dist);
+  guard(file);
   mkdirSync(new URL('./', file), { recursive: true });
   writeFileSync(file, text);
 }
 
 const pageHtml = page('page.html');
 write('p/index.html', pageHtml);
-write('index.html', page('notice.html', { message: 'home', state: 'home' }));
 // GitHub Pages has no rewrites: every unknown path, /p/<id> included, gets 404.html, so there it is the page.
 write('404.html', host === 'github-pages' ? pageHtml : page('notice.html', { message: 'notATag', state: 'not-a-tag' }));
 write('.nojekyll', '');
@@ -99,4 +122,11 @@ for (const file of ['_headers', '_redirects', '.well-known/apple-app-site-associ
   if (existsSync(source)) write(file, readFileSync(source));
   else if (host === 'cloudflare' && file === '_headers') throw new Error(`src/host/${file} is missing`);
 }
-console.log(`build: dist/ for ${host} (${configName}): assets/${jsFile}, assets/${cssFile}`);
+// The launch fixture's media, in the fixture build only (site/src/config/launch.ts FIXTURE_DIR).
+if (launch === 'fixture') {
+  const target = new URL('fixture/', dist);
+  guard(target);
+  mkdirSync(target);
+  for (const f of ['screenshot.png', 'poster.png', 'preview.mp4']) cpSync(new URL(`test/fixtures/site/${f}`, root), new URL(f, target));
+}
+console.log(`build: dist/ for ${host} (${configName}${launch ? `, launch ${launch}` : ''}): assets/${jsFile}, assets/${cssFile}`);

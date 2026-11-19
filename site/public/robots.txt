@@ -1,0 +1,6 @@
+# Everything may be crawled. The card pages under /p/ answer with X-Robots-Tag: noindex, which a crawler
+# can only see if it is allowed to fetch them.
+User-agent: *
+Allow: /
+
+Sitemap: https://pets.binarybridges.co/sitemap.xml

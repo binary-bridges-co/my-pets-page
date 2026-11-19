@@ -57,7 +57,8 @@ try {
   }
   if (!ready) throw new Error('check-pages: wrangler pages dev did not start');
   code = await new Promise((resolve) => {
-    spawn(process.execPath, [fileURLToPath(new URL('check-headers.mjs', import.meta.url)), base], { stdio: 'inherit' }).on('exit', (c, signal) =>
+    // --launch=fixture passes through, for a fixture build.
+    spawn(process.execPath, [fileURLToPath(new URL('check-headers.mjs', import.meta.url)), base, ...process.argv.slice(2)], { stdio: 'inherit' }).on('exit', (c, signal) =>
       resolve(signal ? 1 : (c ?? 1)),
     );
   });
