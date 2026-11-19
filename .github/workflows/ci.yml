@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Astro's telemetry is also turned off in scripts/build.mjs and the typecheck script; this is a second guard.
+  ASTRO_TELEMETRY_DISABLED: 1
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -28,6 +32,8 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Spec vectors are the pinned copy
         run: npm run check:spec
+      - name: Design tokens and marks are the pinned copies
+        run: npm run check:tokens
       - name: Build (vendor check, type check, bundle)
         run: npm run build
       - name: Unit tests
@@ -40,6 +46,10 @@ jobs:
         run: npm run check:pages
       - name: The GitHub Pages fallback builds too
         run: node scripts/build.mjs --host=github-pages && npm run check:budget
+      - name: The launch fixture build (pre-order state) passes the budget and the header checks
+        run: node scripts/build.mjs --launch=fixture && npm run check:budget -- --launch=fixture && npm run check:headers -- --launch=fixture && npm run check:pages -- --launch=fixture
+      - name: The normal build again carries no fixture
+        run: npm run build && npm run check:no-fixture
 
   browsers:
     name: Browsers (${{ matrix.project }})
@@ -62,3 +72,5 @@ jobs:
       - run: npm run build
       - name: Browser tests against the local preview (CloudKit from fixtures)
         run: npx playwright test --project=${{ matrix.project }}
+      - name: The homepage specs on the launch fixture build
+        run: PETS_LAUNCH=fixture npx playwright test --project=${{ matrix.project }} test/e2e/home

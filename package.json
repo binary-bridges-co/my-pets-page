@@ -20,7 +20,8 @@
     "test:e2e": "playwright test",
     "check:headers": "node scripts/check-headers.mjs",
     "check:pages": "node scripts/check-pages.mjs",
-    "check:tokens": "scripts/check-tokens-source.sh"
+    "check:tokens": "scripts/check-tokens-source.sh",
+    "check:no-fixture": "node scripts/check-no-fixture.mjs"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
