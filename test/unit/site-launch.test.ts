@@ -63,6 +63,8 @@ test('validate accepts both configs and refuses bad ids, dates, emails and media
     [{ pressEmail: 'mailto:press@binarybridges.co' }, /pressEmail/],
     [{ previewVideo: { src: 'https://example.com/v.mp4', poster: '/p.png', width: 10, height: 20 } }, /same-origin/],
     [{ previewVideo: { src: '//example.com/v.mp4', poster: '/p.png', width: 10, height: 20 } }, /same-origin/],
+    [{ previewVideo: { src: '/\\example.com/v.mp4', poster: '/p.png', width: 10, height: 20 } }, /same-origin/],
+    [{ screenshots: [{ src: '/\\example.com/s.png', alt: 'A', width: 10, height: 20 }] }, /same-origin/],
     [{ screenshots: [{ src: '/s.png', alt: '', width: 10, height: 20 }] }, /alt/],
     [{ screenshots: [{ src: '/s.png', alt: 'A', width: 0, height: 20 }] }, /width/],
   ];
@@ -105,7 +107,7 @@ test('sitePrivacyLine names the banner exactly when the page emits it (owner dec
   }
 });
 
-test('priceLines: the dated sentence names both prices; the day it ends, the regular price', () => {
+test('priceLines: the dated sentence names both prices; endsOn is the last launch-price day', () => {
   const at = (iso: string) => new Date(`${iso}T12:00:00Z`);
   const undated = withStore({ state: 'coming-soon' });
   assert.deepEqual(priceLines(undated, at('2026-11-19')), {
@@ -115,10 +117,12 @@ test('priceLines: the dated sentence names both prices; the day it ends, the reg
   const dated: LaunchConfig = { ...undated, launchPrice: { ...undated.launchPrice, endsOn: '2027-03-01' } };
   const before = { amount: 'US$9.99', line: 'US$9.99 launch price until March 1, 2027, then US$19.99. One payment, no subscription.' };
   const after = { amount: 'US$19.99', line: 'US$19.99, one payment, no subscription.' };
+  // "until March 1" includes March 1: the regular price starts the day after.
   assert.deepEqual(priceLines(dated, at('2027-02-28')), before);
-  assert.deepEqual(priceLines(dated, new Date('2027-02-28T23:59:59Z')), before);
-  assert.deepEqual(priceLines(dated, at('2027-03-01')), after);
+  assert.deepEqual(priceLines(dated, at('2027-03-01')), before);
+  assert.deepEqual(priceLines(dated, new Date('2027-03-01T23:59:59Z')), before);
   assert.deepEqual(priceLines(dated, at('2027-03-02')), after);
+  assert.deepEqual(priceLines(dated, at('2027-04-01')), after);
 });
 
 test('formatDate writes a date the US way, without a time zone shift', () => {

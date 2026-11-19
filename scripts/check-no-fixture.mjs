@@ -29,6 +29,9 @@ function walk(path) {
 }
 const files = walk(dir);
 if (files.length === 0) fail(`${dir} is empty: run \`npm run build\` first`);
-const leaks = files.filter((f) => readFileSync(f).includes(FIXTURE_ID) || readFileSync(f).includes('ct=fixture'));
+const leaks = files.filter((f) => {
+  const bytes = readFileSync(f);
+  return bytes.includes(FIXTURE_ID) || bytes.includes('ct=fixture');
+});
 if (leaks.length > 0) fail(`fixture data in ${leaks.map((f) => relative(dir, f)).join(', ')}`);
 console.log(`check-no-fixture: ${files.length} files in ${relative(root, dir) || dir}, no fixture`);

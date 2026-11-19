@@ -313,6 +313,8 @@ Reality and the round 2 review's low findings changed these points; the rest of 
 | A9 | Copy | The satellite sentence of #273 starts "Exploring:"; it sits in the Exploring group, so it is rendered as "Helping find lost pets where there is no cell signal, with open collar devices." The origin story keeps the decided sentence verbatim and adds one: "My Pets is my answer to both: every dose on time, and a record that stays with the family." |
 | A10 | theme-color | The `paper` token of each theme (light and dark), read from `tokens.css`. |
 | A11 | Netlify fallback | Netlify does not read `! Name`, so the homepage's header rules need rewriting there; noted in DESIGN §10 and the RUNBOOK. |
+| A13 | Launch-price end date (code review) | `launchPrice.endsOn` is the **last** day of the launch price, included: "until March 1" means through March 1, and the regular price shows from the day after (the plan had "on or after `endsOn`"). RUNBOOK: rebuild the day after. |
+| A14 | Same-origin media paths (code review) | `validate` also refuses a backslash in a media path (`/\host` is read as another host). |
 | A12 | Fixture browser run | `PETS_LAUNCH=fixture npx playwright test test/e2e/home` (a path, so the filter does not match a folder name). |
 
 ## Changes since round 1

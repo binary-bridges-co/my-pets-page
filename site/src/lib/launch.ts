@@ -21,7 +21,7 @@ export interface LaunchConfig {
   appStore: AppStore;
   /** ISO date (YYYY-MM-DD) for the fact sheet; null until the launch date is set. */
   releaseDate: string | null;
-  /** endsOn: the ISO date the launch price ends; null until launch day (my-pets-ios issue 263: three months from launch). */
+  /** endsOn: the last day (ISO date) of the launch price, included; null until launch day (my-pets-ios issue 263: three months from launch). */
   launchPrice: { price: 'US$9.99'; regular: 'US$19.99'; endsOn: string | null };
   /** null until the mailbox exists (owner decision 2). */
   pressEmail: string | null;
@@ -38,7 +38,8 @@ function isIsoDate(value: string): boolean {
   return date.toISOString().slice(0, 10) === value;
 }
 
-const sameOrigin = (src: string) => src.startsWith('/') && !src.startsWith('//');
+// A path on this site: one leading slash, and no backslash (browsers read `/\\host` as another host).
+const sameOrigin = (src: string) => src.startsWith('/') && !src.startsWith('//') && !src.includes('\\');
 const positive = (n: number) => Number.isInteger(n) && n > 0;
 
 /** Fails the build on a config that would render something false or broken. */
@@ -110,12 +111,12 @@ export function sitePrivacyLine(config: LaunchConfig): string {
   return smartAppBanner(config) === '' ? nothing : `${nothing} On iPhone, Safari may show Apple's App Store banner.`;
 }
 
-/** The price as of the build. The dated sentence names both prices, so a page not rebuilt stays true. */
+/** The price as of the build. "until <endsOn>" includes that day; the regular price starts the day after. The dated sentence names both prices, so a page not rebuilt stays true. */
 export function priceLines(config: LaunchConfig, buildDate: Date): { amount: string; line: string } {
   const { price, regular, endsOn } = config.launchPrice;
   if (endsOn === null) return { amount: price, line: `${price} launch price for the first three months, then ${regular}.` };
   const today = buildDate.toISOString().slice(0, 10);
-  if (today < endsOn) return { amount: price, line: `${price} launch price until ${formatDate(endsOn)}, then ${regular}. One payment, no subscription.` };
+  if (today <= endsOn) return { amount: price, line: `${price} launch price until ${formatDate(endsOn)}, then ${regular}. One payment, no subscription.` };
   return { amount: regular, line: `${regular}, one payment, no subscription.` };
 }
 
