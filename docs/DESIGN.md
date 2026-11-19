@@ -14,8 +14,9 @@ Goals:
 - Nothing about visitors is kept by us: no analytics, no storage, no request other than the one lookup.
 - The site serves `/.well-known/apple-app-site-association`, so My Pets opens from the link.
 - The same `dist/` deploys to Cloudflare Pages (chosen), GitHub Pages or Netlify.
+- `/` and `/press` are the My Pets homepage and press page (issue #8), built with Astro on the Binary Bridges design system (site surface, tokens pinned in `site/TOKENS_SOURCE`), indexable, with no script, no cookie, no storage and no request outside the site.
 
-Non-goals: writes of any kind (the page holds a read-only token and the World role can only read), scan counters, maps, Apple's CloudKit JS script, fonts, service workers.
+Non-goals: writes of any kind (the page holds a read-only token and the World role can only read), scan counters, maps, Apple's CloudKit JS script, fonts on the card page (only the homepage self-hosts Geist), service workers, analytics on any page.
 
 ## 2. Architecture
 
@@ -32,14 +33,20 @@ flowchart LR
 | Path | What |
 |---|---|
 | `p/index.html` | The page for every `/p/*` (a 200 rewrite). Its static body is state A, in English and Spanish |
-| `index.html` | The site's home: one line on what the site is |
+| `index.html`, `press.html` | The homepage and the press page, built by Astro from `site/` (served at `/` and `/press`) |
+| `_astro/*.css`, `_astro/*.woff2` | The homepage's stylesheets and its two Geist Latin fonts, content-hashed |
+| `icon.svg`, `icon-dark.svg`, `badges/*.svg` | The Bridge cat (pinned copy of bb-context's) and Apple's official App Store badges (`site/BADGES_SOURCE`) |
+| `sitemap.xml`, `robots.txt` | `/` and `/press` for search engines |
+| `fixture/` | Only in a `--launch=fixture` build (CI): the launch-state test media. Never in a normal build (`npm run check:no-fixture`) |
 | `404.html` | "This isn't a My Pets tag link." for anything else |
 | `assets/page.<hash>.js`, `assets/page.<hash>.css` | The only script and stylesheet, content-hashed |
 | `.well-known/apple-app-site-association` | App links (§9) |
 | `_headers`, `_redirects` | Cloudflare Pages and Netlify configuration (§8, §10) |
 | `.nojekyll` | So GitHub Pages serves the dot folder |
 
-Source: `src/` (TypeScript: `page.ts` entry, `cloudkit.ts`, `reader.ts`, `card.ts`, `chipCard` rules, `fragment.ts`, `ed25519.ts`, `jcs.ts`, `jpeg.ts`, `render.ts`, `text.ts`, `where.ts`, `strings/{en,es}.json`), `vendor/` (pinned `@noble/ed25519`), `config/` (container, environment, token per deploy), `scripts/` (build, vendor and Spec checks, budget, headers check, local preview).
+`scripts/build.mjs` runs Astro first (it owns and empties `dist/`), then the card build, which fails if Astro wrote any path it owns. Astro's telemetry is off before Astro is imported. The homepage's launch state (App Store state and id, release date, launch-price end date, press address, video, screenshots) is one file, `site/src/config/launch.ts`; `--launch=fixture` builds the pre-order state with test media for CI.
+
+Source of the homepage: `site/` (`astro.config.mjs`, `src/pages/`, `src/layouts/`, `src/components/` ported from bb-homepage, `src/content/en.ts` for every word, `src/lib/launch.ts` for the launch logic, `src/styles/tokens.css` pinned from bb-context). Source of the card page: `src/` (TypeScript: `page.ts` entry, `cloudkit.ts`, `reader.ts`, `card.ts`, `chipCard` rules, `fragment.ts`, `ed25519.ts`, `jcs.ts`, `jpeg.ts`, `render.ts`, `text.ts`, `where.ts`, `strings/{en,es}.json`), `vendor/` (pinned `@noble/ed25519`), `config/` (container, environment, token per deploy), `scripts/` (build, vendor and Spec checks, budget, headers check, local preview).
 
 ## 3. CloudKit Web Services (phase 0)
 
@@ -113,6 +120,8 @@ Every node is built with `createElement` and `textContent`; the only links are t
 
 `scripts/check-budget.mjs` fails CI over any of the first three.
 
+The homepage has its own rows: `index.html` and `press.html` ≤ 16 KB each; all `_astro/*.css` ≤ 15 KB; no script at all; at most two fonts, ≤ 80 KB raw together; each icon and badge by name; in a fixture build (`--launch=fixture`) the fixture media. Any other file in `dist/` fails. Real screenshots and the video get their own rows when they arrive.
+
 ## 8. Headers (`_headers`)
 
 On every response:
@@ -137,6 +146,17 @@ Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'
 Cache-Control: no-cache
 ```
 
+`/` and `/press` replace the CSP and drop `X-Robots-Tag` (a later `_headers` rule detaches them with `! Name`, then sets its own; Pages applies rules in order):
+
+```
+Content-Security-Policy: default-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; media-src 'self';
+  font-src 'self'; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none';
+  manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+Cache-Control: no-cache
+```
+
+`_astro/*` is immutable; `sitemap.xml` and `robots.txt` drop `X-Robots-Tag`. Once the app has an App Store id, the homepage carries Apple's Smart App Banner meta: Safari then asks Apple for the banner, which the page's privacy line says (`sitePrivacyLine`).
+
 `connect-src` names the CloudKit endpoint and nothing else; `img-src blob:` is for the photo built from the record's bytes. `assets/*` get `Cache-Control: public, max-age=31536000, immutable`. The AASA file gets `Content-Type: application/json` and `Cache-Control: max-age=3600`. `scripts/check-headers.mjs` checks all of it against any base URL: the local preview in CI, the Pages preview and production at go-live.
 
 ## 9. App links
@@ -151,9 +171,9 @@ Team ID `9JB56TN367` (Binary Bridges SAS), bundle id `co.binarybridges.pets` (ow
 
 ## 10. Hosting
 
-Cloudflare Pages on the free plan (owner, 5 Nov 2026), built from this repository by Pages' Git integration (`docs/RUNBOOK.md`). `_redirects` holds the one rewrite, `/p/*  /p/  200` (Pages answers 404 for a rewrite to `/p/index.html`); Pages serves `404.html` for anything else. Pages adds `Access-Control-Allow-Origin: *` to static files by default; `_headers` detaches it. Web Analytics stays **off** (it injects a script). The custom domain `pets.binarybridges.co` is a CNAME to the project's `pages.dev` name at Namecheap; no nameserver move. Step by step: `docs/RUNBOOK.md`.
+Cloudflare Pages on the free plan (owner, 5 Nov 2026), built from this repository by Pages' Git integration (`docs/RUNBOOK.md`). `_redirects` holds the one rewrite, `/p/*  /p/  200` (Pages answers 404 for a rewrite to `/p/index.html`); Pages serves `404.html` for anything else. Pages adds `Access-Control-Allow-Origin: *` to static files by default; `_headers` detaches it. Pages serves clean URLs: `/press` is `press.html`, and `/press.html`, `/press/` and `/index.html` answer 308 to the clean path, so each page has one address. Web Analytics stays **off** (it injects a script). The custom domain `pets.binarybridges.co` is a CNAME to the project's `pages.dev` name at Namecheap; no nameserver move. Step by step: `docs/RUNBOOK.md`.
 
-Portability: `npm run build -- --host=github-pages` writes the same files plus a `<meta>` CSP (without `frame-ancestors`, which a meta tag can't carry) and a `404.html` that is the page itself, since GitHub Pages has neither headers nor rewrites. Netlify reads the same `_headers` and `_redirects`.
+Portability: `npm run build -- --host=github-pages` writes the same files plus a `<meta>` CSP (without `frame-ancestors`, which a meta tag can't carry) and a `404.html` that is the page itself, since GitHub Pages has neither headers nor rewrites. Netlify reads the same `_redirects`; its `_headers` has no `! Name` detach, so there the homepage would keep the card's CSP (fonts blocked) and `noindex` until its rules are rewritten.
 
 `npm run preview` serves `dist/` locally with the same `_headers` and `_redirects` rules, and the browser tests and the header check run against it. `npm run check:pages` runs the same header check against `wrangler pages dev` (Cloudflare's own local emulation of Pages, no account), so CI checks the host's real rules too.
 
@@ -167,7 +187,8 @@ Portability: `npm run build -- --host=github-pages` writes the same files plus a
 | T16 | A forged or replayed record | §4: only the tag key's signature is accepted; the newest signed state wins; deactivate is final; 395-day age limit | A squatter on `<id>` before the reservation: the page shows the fragment or A (Spec §15.11) |
 | T17 | A hostile photo | Never decoded by us before the marker walk; hash and JPEG rule first; shown from a `blob:` URL only | The browser's own decoder |
 | T18 | The token is abused | It reads only what is public by link; the World role can't write; Allowed Origins stops other sites embedding it | Scripts can read records by name, as anyone can |
-| T19 | Supply chain | No runtime dependency but the vendored, hash-pinned `@noble/ed25519`; dev tools pinned exactly; actions pinned by SHA | Standard |
+| T19 | Supply chain | No runtime dependency but the vendored, hash-pinned `@noble/ed25519`; dev tools pinned exactly (Astro, Tailwind and their tree included, in the lock file); actions pinned by SHA. Nothing of Astro's tree ships but HTML, CSS and fonts | Standard; Astro's dev tree is large |
+| T20 | The homepage leaks or tracks | No script (`script-src 'none'`), same-origin resources only, no cookie or storage; the App Store link uses `?ct=` for attribution, not a referrer; the banner request is Safari's own and disclosed | Apple sees a Safari visitor once the banner meta is set |
 
 ## 12. Spec §15 r3
 
@@ -184,8 +205,11 @@ When §15 changes: copy the new file, update `SPEC_SOURCE` (commit and SHA-256),
   - `where.spec.ts`: Send where I am with a mocked location, in English and Spanish, with no request after the tap;
   - `nojs.spec.ts`: JavaScript off shows state A in both languages, the 404 notice and the home;
   - `a11y.spec.ts`: axe-core with no violation on every state in light and dark, the keyboard order of state C, reduced motion;
-  - `layout.spec.ts`: 320, 375, 768, 1024, 1440 and 1920 px in light and dark, no sideways scroll, the Call button on screen and at least 44 px tall.
-- **Host** (`npm run check:headers`, `npm run check:pages`): DESIGN §8–§10 on the local preview and on `wrangler pages dev`.
+  - `layout.spec.ts`: 320, 375, 768, 1024, 1440 and 1920 px in light and dark, no sideways scroll, the Call button on screen and at least 44 px tall;
+  - `home.spec.ts`, `home-privacy.spec.ts`, `home-layout.spec.ts`, `home-a11y.spec.ts`: the homepage and `/press` content in order, the badge, banner and privacy line from the config, no request outside the site, no storage, 320 to 1920 px in both themes with 44 px standalone controls, axe at 320, 1024 and 1920 px in both themes, headings, landmarks, focus and reduced motion. They read the launch state from `test/e2e/launch-state.ts` and run twice in CI: on the normal build and with `PETS_LAUNCH=fixture` on the launch fixture build.
+- **Homepage units**: `site-launch.test.ts` (validation, badge, banner and privacy line tied together, price lines around the end date, press contact), `site-copy.test.ts` (banned words and names, the proof points, roadmap and disclaimer verbatim), `site-build.test.ts` (no reserved path in `site/`, telemetry off, no colour outside the tokens, one CSP string, pinned badges, the no-fixture check).
+- **Host** (`npm run check:headers`, `npm run check:pages`, each with `-- --launch=fixture` for the fixture build): DESIGN §8–§10 on the local preview and on `wrangler pages dev`, the homepage, `/press`, their assets, the sitemap, robots.txt and the clean-URL redirects included.
+- **Tokens** (`npm run check:tokens`): the token file and the marks match `site/TOKENS_SOURCE` (`BB_CONTEXT=<checkout>` also compares the bytes).
 - **Budget** (`npm run check:budget`): §7, plus a CSP with Trusted Types in the built output.
 
 Not automated: Lighthouse's timings (the plan's LCP, CLS, INP and TBT targets). The page is one 0.7 KB HTML file, 1.6 KB of CSS and 13 KB of JS gzipped, with no font or third-party request; a Lighthouse run on the Pages preview is part of the go-live checks.

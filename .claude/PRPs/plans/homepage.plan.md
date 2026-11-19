@@ -247,9 +247,9 @@ npm run check:pages                      # the same on wrangler pages dev
 node scripts/build.mjs --host=github-pages && npm run check:budget
 npx playwright install --with-deps chromium firefox webkit
 npx playwright test                      # every card spec plus the home specs, three engines
-node scripts/build.mjs --launch=fixture && npm run check:budget && npm run check:headers
-PETS_LAUNCH=fixture npx playwright test home   # launch-state markup: badge, banner + privacy line, video, screenshot, mailto
-npm run build && npm run test:unit       # leave the Cloudflare build in dist/; no fixture in it
+node scripts/build.mjs --launch=fixture && npm run check:budget -- --launch=fixture && npm run check:headers -- --launch=fixture && npm run check:pages -- --launch=fixture
+PETS_LAUNCH=fixture npx playwright test test/e2e/home   # launch-state markup: badge, banner + privacy line, video, screenshot, mailto
+npm run build && npm run test:unit && npm run check:no-fixture   # leave the Cloudflare build in dist/; no fixture in it
 ```
 
 Acceptance criteria to proof:
@@ -295,6 +295,25 @@ No `bb-infrastructure` change: pets.binarybridges.co is Cloudflare Pages, outsid
 | Copy drifts into claims (diagnosis, competitors, jargon) | Low | `site-copy.test.ts` |
 
 Rollback: revert the merge commit on `main`; Cloudflare Pages rebuilds the previous `dist/` (the one-line home and the card page as they are today). Nothing else holds state: no data, no DNS, no infrastructure change.
+
+## Amendments during implementation
+
+Reality and the round 2 review's low findings changed these points; the rest of the plan holds as written.
+
+| # | Point | Amendment |
+|---|---|---|
+| A1 | Fixture mode (review finding 1) | `scripts/build.mjs` sets `PETS_LAUNCH` only from `--launch=fixture` and deletes it otherwise. The fixture media land in `dist/fixture/` (`FIXTURE_DIR`). `check:budget`, `check:headers` and `check:pages` take `--launch=fixture`; the budget and the local header check refuse a `dist/` that does not match the mode, with a message saying which build to run. |
+| A2 | No-fixture assertion (finding 2) | Moved out of `npm run test:unit` into `scripts/check-no-fixture.mjs` (`npm run check:no-fixture`), run in CI after the last normal build. It fails with "run `npm run build` first" when `dist/` is missing or empty, says when `dist/` is a fixture build, and names any file holding the fixture id. `site-build.test.ts` runs it on temporary folders and checks its constants match the config. |
+| A3 | Price research (finding 3) | The repository is public: `docs/research/subscription-prices.md` holds the date, the method and the yearly prices of five apps, anonymised (A to E), no app names. 8 of 10 yearly tiers seen fall between US$19.00 and US$47.99, so the figure "about US$20-50 a year" is kept, with the footnote "checked November 2026". |
+| A4 | Press section labels (finding 5) | `/press`: 00 Press kit (h1), 01 About the app, 02 Fact sheet, 03 Screenshots and video, 04 App icon, 05 Privacy, 06 Developer note, 07 Promo codes. |
+| A5 | Apple badges | `tools.applemarketingtools.com` no longer resolves; Apple's tool is now `toolbox.marketingtools.apple.com`, which serves "Download on the App Store" in black and white (US English) but has no pre-order badge. The pre-order badge is Apple's file on the App Store marketing guidelines page (`developer.apple.com/app-store/marketing/guidelines/images/badge-pre-order-on-the-app-store.svg`), black only; the same page's download badge is byte-identical to the toolbox's, which confirms the source. So the pre-order state shows the black badge in both themes (its grey border is made for dark backgrounds) and only the download state uses a dark-mode `<picture>` source. The files are unaltered and pinned by SHA-256 in `site/BADGES_SOURCE`, checked by `site-build.test.ts`. The badge SVGs use inline `style` attributes; they render under the site CSP in Chromium and Firefox (checked), so no extra header rule. |
+| A6 | Where the site privacy line sits | On `/` it is in the privacy section (an aside, "This website"); on `/press` it is in the footer. Both call `sitePrivacyLine(config)`; one `#site-privacy` per page. |
+| A7 | One CSP string | `site/src/lib/csp.ts` exports `HOME_CSP` (and the meta form for GitHub Pages); a unit test checks `_headers` for `/` and `/press` and `check-headers.mjs` carry the same string. |
+| A8 | Preview path rules | `scripts/preview.mjs` now follows wrangler's `generateResponse` in full, so besides the homepage redirects `/p` (no slash) answers 308 to `/p/`, as Pages does. Card behaviour on `/p/<id>` is unchanged. |
+| A9 | Copy | The satellite sentence of #273 starts "Exploring:"; it sits in the Exploring group, so it is rendered as "Helping find lost pets where there is no cell signal, with open collar devices." The origin story keeps the decided sentence verbatim and adds one: "My Pets is my answer to both: every dose on time, and a record that stays with the family." |
+| A10 | theme-color | The `paper` token of each theme (light and dark), read from `tokens.css`. |
+| A11 | Netlify fallback | Netlify does not read `! Name`, so the homepage's header rules need rewriting there; noted in DESIGN §10 and the RUNBOOK. |
+| A12 | Fixture browser run | `PETS_LAUNCH=fixture npx playwright test test/e2e/home` (a path, so the filter does not match a folder name). |
 
 ## Changes since round 1
 

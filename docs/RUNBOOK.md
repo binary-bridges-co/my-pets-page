@@ -76,10 +76,21 @@ Record in `docs/DESIGN.md` §3 and as fixtures in `test/support/scenarios.ts`: t
 
 Run them with the beta build: a tag tapped and scanned on a phone without My Pets shows the card; lost mode shows the band within a minute of a fresh load; Deactivate makes the page say "This tag is no longer active"; Safari's Web Inspector shows only `pets.binarybridges.co` and `api.apple-cloudkit.com`, no cookie, no storage; a force-quit iPhone with My Pets opens the app from the tag.
 
+## 5. The homepage on launch day
+
+The homepage's launch state is one file, `site/src/config/launch.ts` (`realConfig`); CI already tests the pre-order state with the fixture build.
+
+1. When the listing exists: set `appStore` to `{ state: 'pre-order', id: '<digits>' }` (add `campaign` for a `?ct=` tag if wanted), and to `'available'` on release day. The badge, the Smart App Banner and the privacy line follow.
+2. Set `releaseDate` (ISO date) and `launchPrice.endsOn` (three months after launch, ISO date).
+3. Once the mailbox `press@binarybridges.co` receives mail, set `pressEmail` to it. Never before: until then the press page says "Promo codes on request." with no address.
+4. Add real screenshots and the video under `site/public/` with a budget row each (`scripts/check-budget.mjs`), then list them in `screenshots` and `previewVideo`.
+5. **Rebuild on `endsOn`** (retry the last deployment in Cloudflare, or push any commit): the page then shows US$19.99 only. Before the rebuild it still tells the truth, since the dated line names both prices.
+6. After deploy: `npm run check:headers -- https://pets.binarybridges.co` (it checks `/`, `/press` and their assets too), and Lighthouse on `/` once (mobile). Web Analytics stays off.
+
 ## If the host must change
 
 The same `dist/` serves anywhere; the records stay in iCloud.
 
 - **GitHub Pages** (fallback): `npm run build -- --host=github-pages` adds a `<meta>` CSP (without `frame-ancestors`) and makes `404.html` the page, since GitHub Pages has no headers and no rewrites (so `/p/<id>` answers with status 404 and the page still works). Publish `dist/` with the official Pages actions, set the repository's custom domain to `pets.binarybridges.co`, and change the Namecheap CNAME to `binary-bridges-co.github.io.`. Limits: no HSTS, COOP, CORP or Permissions-Policy headers; the AASA file is served with GitHub's own content type (Apple may refuse it, so app links can stop working); GitHub logs visitors' addresses.
-- **Netlify**: the same `_headers` (drop the `! Access-Control-Allow-Origin` line, which only Cloudflare reads) and `_redirects`; CNAME to `<site>.netlify.app`. Its free plan is credit-based and can pause a site.
+- **Netlify**: the same `_redirects`, and `_headers` rewritten without the `! Name` lines (only Cloudflare reads them: give `/p/*`, `/404.html` and the other card paths the card CSP and `noindex`, and `/` and `/press` the homepage CSP); CNAME to `<site>.netlify.app`. Its free plan is credit-based and can pause a site.
 - After any move: the new allowed origin in the production API token (step 1.5), then `npm run check:headers -- https://pets.binarybridges.co`.
