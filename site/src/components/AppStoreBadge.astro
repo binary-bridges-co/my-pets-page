@@ -1,0 +1,55 @@
+---
+/**
+ * The hero's one call to action. Before the listing exists: a plain "coming soon" label in a pill, never
+ * Apple's artwork (Apple has no such badge, and its badge may not be altered). Once the app is out: Apple's
+ * official badge, unaltered (site/BADGES_SOURCE), linking to the listing; the white one in dark mode
+ * when Apple publishes one.
+ */
+import type { Badge } from '../lib/launch';
+
+interface Props {
+  badge: Badge;
+}
+const { badge } = Astro.props;
+---
+
+<div class="store" data-app-store>
+  {
+    badge.kind === 'label' ? (
+      <p class="store__label">{badge.text}</p>
+    ) : (
+      <a class="store__link" href={badge.href}>
+        <picture>
+          {badge.dark && <source srcset={badge.dark} media="(prefers-color-scheme: dark)" />}
+          <img src={badge.light} alt={badge.alt} width={badge.width} height={badge.height} />
+        </picture>
+      </a>
+    )
+  }
+</div>
+
+<style>
+  .store {
+    display: inline-flex;
+  }
+  .store__label {
+    display: inline-flex;
+    align-items: center;
+    min-height: 3rem;
+    margin: 0;
+    padding: 0.75rem 1.375rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-pill);
+    font-weight: 550;
+    font-size: 0.975rem;
+    color: var(--color-ink);
+  }
+  .store__link {
+    display: inline-flex;
+  }
+  .store__link img {
+    display: block;
+    height: 3rem;
+    width: auto;
+  }
+</style>

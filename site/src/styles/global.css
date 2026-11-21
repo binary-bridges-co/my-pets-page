@@ -1,0 +1,123 @@
+/* The homepage's base: Tailwind, the pinned bb-context tokens (tokens.css, never edited), Geist Latin
+ * self-hosted, and the site surface's base rules (bb-context docs/platforms/site.md). No colour is
+ * written here: every one is a token. */
+@import 'tailwindcss';
+@import './tokens.css';
+
+@font-face {
+  font-family: 'Geist Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../../../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Geist Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../../../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+
+  a {
+    color: var(--color-accent);
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: var(--radius-box);
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 22%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
+
+@layer components {
+  /* The site container: at most 80rem, fluid inline padding. */
+  .wrap {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 4vw, 2.5rem);
+  }
+
+  /* Sections are space-section apart, with a hairline between them. */
+  .section {
+    padding-block: calc(var(--spacing-section) / 2);
+    border-top: 1px solid var(--color-line);
+  }
+
+  /* Mono section label: "02 / Price". An annotation in the margin of a plan, not a heading. */
+  .section-label {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .display {
+    margin: 0;
+    font-size: var(--text-display);
+    line-height: var(--text-display--line-height);
+    font-weight: 620;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+
+  .lead {
+    max-width: 38rem;
+    font-size: var(--text-lead);
+    line-height: var(--text-lead--line-height);
+    text-wrap: pretty;
+  }
+
+  .muted {
+    color: var(--color-muted);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
