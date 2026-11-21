@@ -4,6 +4,25 @@ Going live is the plan's **phase 5**, with the closed beta: it needs an active A
 
 What it costs: Cloudflare Pages free plan (nothing), CloudKit public database (included in the membership), the `binarybridges.co` domain at Namecheap (already paid). Nothing else.
 
+The site is one deploy: the card page (`/p/<id>`), the homepage and `/press`, and the Help, Privacy and Terms pages the App Store listing and the app's Settings link to (`/help`, `/privacy`, `/terms`, and `/es/help`, `/es/privacy`, `/es/terms`). The AASA file claims `/p/*` only, so every other path opens in Safari, never in the app.
+
+## 0. The owner's list, in order
+
+Short form of sections 1 to 3 and 6; the details and the checks are there. Nothing costs money.
+
+1. **Renew the Apple Developer Program membership** (developer.apple.com → Account). The CloudKit Console needs it.
+2. **CloudKit Console, Development** (https://icloud.developer.apple.com → CloudKit Database → container `iCloud.co.binarybridges.pets` → environment switch at the top: **Development**): create the record type `PublicLink` with its five fields, delete every index, set the security roles (§1, steps 1 to 3).
+3. **Deploy the schema to Production**: in the same Console, left column **Deploy Schema Changes…** → Deploy. The Production environment has no `PublicLink` type, and its API token is useless, until this is done. Switch the environment to **Production** and check the type, the fields, no index and the roles (§1, step 4).
+4. **Create the two API tokens**: left column **Tokens & Keys** (under Settings) → **API Tokens** → **+**. For production: name `my-pets-page production`, environment **Production**, Allowed Origins **Specific domains** → `https://pets.binarybridges.co`, no sign-in callback → Save, and copy the token. Then `my-pets-page development` the same way with environment **Development** and origin `https://my-pets-page.pages.dev` (§1, step 5).
+5. **Put the tokens in the repository**: paste the production token as `apiToken` in `config/production.json` and the development token in `config/development.json`, replacing the `PLACEHOLDER…` values, in a pull request to `main` (or hand them to an agent to open it). They are public by design; the roles protect the records (§1, step 6).
+6. **Cloudflare account**: https://dash.cloudflare.com/sign-up with the owner's email; turn on two-factor (My Profile → Authentication). No card is needed (§2, step 1).
+7. **Pages project**: Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** tab → **Connect to Git** → GitHub → install the Cloudflare app on `binary-bridges-co` with **Only select repositories** → `my-pets-page` → back in Cloudflare choose `my-pets-page` → **Begin setup**. Project name `my-pets-page`, production branch `main`, framework preset **None**, the build command and output directory of §2 step 4, and under **Environment variables** `NODE_VERSION` = `22` → **Save and Deploy** (§2, steps 2 to 4).
+8. **Turn Web Analytics off**: the project → **Metrics** (or Settings) → Web Analytics → **Disable** if it is on. Leave Bot Fight Mode off (§2, step 5).
+9. **Custom domain**: the project → **Custom domains** → **Set up a custom domain** → `pets.binarybridges.co` → Continue. Cloudflare shows a CNAME to add (§3, step 1).
+10. **DNS at Namecheap**: Domain List → `binarybridges.co` → **Manage** → **Advanced DNS** → delete the `A` record `pets` → `46.202.176.67`; **Add new record** → `CNAME Record`, host `pets`, value `my-pets-page.pages.dev.`, TTL Automatic → save. Back in Cloudflare wait for **Active** and the certificate (§3, steps 2 and 3).
+11. **Effective date**: if the pages go live after the date in `site/src/content/legal.ts` (`PRIVACY_EFFECTIVE_DATE`), change it to the go-live day in the same pull request as the tokens (§6).
+12. **Run the go-live checks** of §3 step 4 and §6, then the device checks of §4. Tell the iOS repo (issue `binary-bridges-co/my-pets-ios#312`) the pages are live, so the Spanish App Store page and the app can use the `/es/` addresses.
+
 ## 1. CloudKit: schema, roles, tokens (CloudKit Console, after the renewal)
 
 At https://icloud.developer.apple.com, container `iCloud.co.binarybridges.pets`, **Development** environment first.
@@ -86,6 +105,27 @@ The homepage's launch state is one file, `site/src/config/launch.ts` (`realConfi
 4. Add real screenshots and the video under `site/public/` with a budget row each (`scripts/check-budget.mjs`), then list them in `screenshots` and `previewVideo`.
 5. **Rebuild the day after `endsOn`** (retry the last deployment in Cloudflare, or push any commit): the page then shows US$19.99 only. Before the rebuild it still tells the truth, since the dated line names both prices.
 6. After deploy: `npm run check:headers -- https://pets.binarybridges.co` (it checks `/`, `/press` and their assets too), and Lighthouse on `/` once (mobile). Web Analytics stays off.
+
+## 6. Help, Privacy and Terms (the App Store's Support and Privacy Policy URLs)
+
+The texts are the iOS repo's `Store/website/` files (English) and `Store/website/es/` (Spanish), copied byte for byte into `site/src/content/legal/` at the commits in `LEGAL_SOURCE`, without their leading note for maintainers. A change is made in the iOS repo first, then copied here with a new `LEGAL_SOURCE` line (`npm run check:legal`, and `IOS_REPO=<checkout> npm run check:legal` to compare with the iOS files). Keep the privacy page in step with the iOS repo's `Store/privacy-label.md`.
+
+- **Effective date.** `PRIVACY_EFFECTIVE_DATE` in `site/src/content/legal.ts` fills `{{EFFECTIVE_DATE}}` on both privacy pages ("Effective November 21, 2026", "Vigente desde el 21 de noviembre de 2026"). It is the go-live day: change it if go-live is later. A placeholder left in a text fails the build.
+- **Contact** is `support@binarybridges.co`, a `mailto:` link only (no form: a form needs a server).
+- Every page has no script (`script-src 'none'`, `connect-src 'none'`), no cookie and nothing from another site; `/es/` pages carry `lang="es"`, and each page names its twin with `hreflang` and links to it ("Español" / "English").
+
+**Go-live checks** (after §3):
+
+```bash
+npm run check:headers -- https://pets.binarybridges.co      # every page below: 200, no redirect, lang, headers; the AASA
+for p in help privacy terms es/help es/privacy es/terms; do curl -s -o /dev/null -w "%{http_code} %{content_type} $p\n" "https://pets.binarybridges.co/$p"; done   # 200 text/html each
+curl -s https://app-site-association.cdn-apple.com/a/v1/pets.binarybridges.co   # Apple's CDN copy: the same JSON as /.well-known/apple-app-site-association
+```
+
+1. Open `/help`, `/privacy`, `/terms` and the three `/es/` pages in Safari on an iPhone: they open in Safari (not in My Pets), the language link switches to the twin, the footer links to all three, the privacy page shows the effective date and no `{{`.
+2. Apple's CDN answers the JSON above with `"/": "/p/*"` and the app ID `9JB56TN367.co.binarybridges.pets`. It can take up to a day after §3 to appear; until then, tag links open in Safari only.
+3. **A published test card from a tag link**: in the beta build, publish a test pet's card, write its link to a tag (or show its QR code), and on an iPhone **with** My Pets tap or scan it: My Pets opens on that pet. On an iPhone **without** My Pets (or with the app deleted): Safari shows the card at `https://pets.binarybridges.co/p/<id>`. Unpublish the test card afterwards.
+4. In App Store Connect, set the app's **Support URL** to `https://pets.binarybridges.co/help` and **Privacy Policy URL** to `https://pets.binarybridges.co/privacy` (Spanish localization: the `/es/` addresses), then tell the iOS repo the pages are live.
 
 ## If the host must change
 

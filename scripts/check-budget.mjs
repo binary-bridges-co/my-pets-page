@@ -1,6 +1,7 @@
 // The weight budget of DESIGN §7, gzipped, over the built dist/. Two sections:
 // - the card page: every card HTML page, its one stylesheet and its one script, under their old numbers;
-// - the homepage: index.html and press.html, the Astro stylesheets, no script at all, at most two fonts,
+// - the homepage: index.html, press.html and the Help, Privacy and Terms pages (English at the root,
+//   Spanish under es/), the Astro stylesheets, no script at all, at most two fonts,
 //   the known images, and in a fixture build only (--launch=fixture) the fixture media.
 // Fails over any of them, on any unexpected file, and prints the sizes.
 //   node scripts/check-budget.mjs [--launch=fixture]
@@ -21,8 +22,9 @@ const MEDIA = {
   'badges/download-on-the-app-store-white.svg': 16 * KB,
 };
 const FIXTURE_MEDIA = { 'fixture/screenshot.png': 30 * KB, 'fixture/poster.png': 30 * KB, 'fixture/preview.mp4': 60 * KB };
-const ROOT_FILES = ['index.html', 'press.html', '404.html', 'sitemap.xml', 'robots.txt', '.nojekyll', '_headers', '_redirects', 'icon.svg', 'icon-dark.svg'];
-const ROOT_DIRS = ['p', 'assets', '.well-known', '_astro', 'badges', ...(fixture ? ['fixture'] : [])];
+const LEGAL = ['help.html', 'privacy.html', 'terms.html'];
+const ROOT_FILES = ['index.html', 'press.html', ...LEGAL, '404.html', 'sitemap.xml', 'robots.txt', '.nojekyll', '_headers', '_redirects', 'icon.svg', 'icon-dark.svg'];
+const ROOT_DIRS = ['p', 'assets', '.well-known', '_astro', 'badges', 'es', ...(fixture ? ['fixture'] : [])];
 
 let failed = false;
 const fail = (message) => {
@@ -64,7 +66,11 @@ for (const f of readdirSync(new URL('assets/', dist))) {
 if (seen.js !== 1 || seen.css !== 1) fail(`expected one script and one stylesheet, found ${seen.js} and ${seen.css}`);
 
 // The homepage.
-for (const file of ['index.html', 'press.html']) row(file, gz(file), HOME.html);
+for (const file of ['index.html', 'press.html', ...LEGAL, ...LEGAL.map((f) => `es/${f}`)]) {
+  if (!existsSync(new URL(file, dist))) fail(`${file} is missing`);
+  else row(file, gz(file), HOME.html);
+}
+for (const f of readdirSync(new URL('es/', dist))) if (!LEGAL.includes(f)) fail(`unexpected file es/${f}`);
 let css = 0;
 let fonts = 0;
 let fontFiles = 0;

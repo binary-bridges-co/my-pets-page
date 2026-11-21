@@ -1,16 +1,26 @@
 ---
 import { PRIVACY, SITE } from '../content/en';
+import { CHROME, LEGAL, LEGAL_PAGES, legalPath, type Lang } from '../content/legal';
 
 interface Props {
   /** The site's privacy line (sitePrivacyLine), when the page does not show it in its own section. */
   privacyLine?: string;
+  lang?: Lang;
+  current?: 'home' | 'press' | 'help' | 'privacy' | 'terms';
 }
-const { privacyLine } = Astro.props;
+const { privacyLine, lang = 'en', current } = Astro.props;
+const chrome = CHROME[lang];
+// Help, Privacy and Terms in the page's language; the homepage and the press kit are English only.
+const links = [
+  { href: '/', label: chrome.footerHome, hreflang: lang === 'en' ? undefined : 'en', current: current === 'home' },
+  ...LEGAL_PAGES.map((page) => ({ href: legalPath(page, lang), label: LEGAL[lang][page].nav, hreflang: undefined, current: current === page })),
+  ...(lang === 'en' ? [{ href: '/press', label: SITE.footerPress, hreflang: undefined, current: current === 'press' }] : []),
+];
 ---
 
 <footer class="site-footer">
   <div class="wrap site-footer__inner">
-    <p class="site-footer__by">{SITE.footerLine}</p>
+    <p class="site-footer__by">{chrome.footerLine}</p>
     {
       privacyLine && (
         <p class="site-footer__privacy">
@@ -19,8 +29,15 @@ const { privacyLine } = Astro.props;
       )
     }
     <ul class="site-footer__links">
-      <li><a href="/">{SITE.footerHome}</a></li>
-      <li><a href="/press">{SITE.footerPress}</a></li>
+      {
+        links.map((link) => (
+          <li>
+            <a href={link.href} hreflang={link.hreflang} aria-current={link.current ? 'page' : undefined}>
+              {link.label}
+            </a>
+          </li>
+        ))
+      }
     </ul>
   </div>
 </footer>

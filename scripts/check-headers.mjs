@@ -1,5 +1,6 @@
 // Checks what a deployed (or locally previewed) site answers (docs/DESIGN.md §8–§10): the headers on
-// the card page, the homepage, /press, their assets and the AASA file, the AASA's exact JSON with status
+// the card page, the homepage, /press, the Help, Privacy and Terms pages (/help, /privacy, /terms and
+// /es/...), their assets and the AASA file, the AASA's exact JSON with status
 // 200 and no redirect, the 200 rewrite of /p/<id>, the 404 for anything else, the sitemap and robots.txt,
 // and the clean-URL redirects that keep one copy of each page.
 //   node scripts/check-headers.mjs                 # builds nothing; serves dist/ with scripts/preview.mjs
@@ -31,6 +32,17 @@ const HOME_CSP =
   "form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; " +
   "require-trusted-types-for 'script'; trusted-types 'none'";
 const HOME = { ...EVERY, 'content-security-policy': HOME_CSP, 'cache-control': 'no-cache' };
+// The site's pages with the homepage's headers, each with a phrase only it carries and its language.
+const SITE_PAGES = [
+  ['/', 'Every dose on time', 'en'],
+  ['/press', 'for the press', 'en'],
+  ['/help', 'Collar tag and lost mode', 'en'],
+  ['/privacy', 'What you choose to publish', 'en'],
+  ['/terms', 'Licensed Application End User License Agreement', 'en'],
+  ['/es/help', 'Placa y modo perdido', 'es'],
+  ['/es/privacy', 'Lo que decides publicar', 'es'],
+  ['/es/terms', 'prevalece la versión en inglés', 'es'],
+];
 delete HOME['x-robots-tag'];
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const TYPE = { css: /^text\/css/, woff2: /^font\/woff2/, svg: /^image\/svg\+xml/, png: /^image\/png/, mp4: /^video\/mp4/ };
@@ -104,11 +116,12 @@ const typeOf = (path) => TYPE[path.split('.').pop()] ?? /^$/;
 
 async function checkHome(base) {
   const own = new Set();
-  for (const [path, marker] of [['/', 'Every dose on time'], ['/press', 'for the press']]) {
+  for (const [path, marker, lang] of SITE_PAGES) {
     const page = await get(base, path);
     expect(page.res.status === 200, `${path}: status ${page.res.status}, want 200 with no redirect`);
     expect(/^text\/html/.test(page.res.headers.get('content-type') ?? ''), `${path}: not text/html`);
     expect(page.body.includes(marker), `${path}: not the page (no "${marker}")`);
+    expect(page.body.includes(`<html lang="${lang}"`), `${path}: not <html lang="${lang}">`);
     headers(path, page.res, {}, HOME);
     expect(!page.res.headers.has('x-robots-tag'), `${path}: has x-robots-tag ${page.res.headers.get('x-robots-tag')}`);
     for (const m of page.body.matchAll(/(?:src|href|poster)="(\/[^"/][^"]*)"/g)) {
@@ -132,7 +145,7 @@ async function checkHome(base) {
   const sitemap = await get(base, '/sitemap.xml');
   expect(sitemap.res.status === 200, `/sitemap.xml: status ${sitemap.res.status}`);
   expect(/xml/.test(sitemap.res.headers.get('content-type') ?? ''), `/sitemap.xml: content type ${sitemap.res.headers.get('content-type')}`);
-  expect(sitemap.body.includes('<loc>https://pets.binarybridges.co/</loc>') && sitemap.body.includes('<loc>https://pets.binarybridges.co/press</loc>'), '/sitemap.xml: lists / and /press');
+  for (const [path] of SITE_PAGES) expect(sitemap.body.includes(`<loc>https://pets.binarybridges.co${path}</loc>`), `/sitemap.xml: lists ${path}`);
   expect(!sitemap.res.headers.has('x-robots-tag'), '/sitemap.xml: has x-robots-tag');
   const robots = await get(base, '/robots.txt');
   expect(robots.res.status === 200, `/robots.txt: status ${robots.res.status}`);
@@ -141,7 +154,16 @@ async function checkHome(base) {
   expect(!robots.res.headers.has('x-robots-tag'), '/robots.txt: has x-robots-tag');
 
   // One copy of each page: the other spellings redirect to the clean path, as Pages does.
-  for (const [path, to] of [['/press/', '/press'], ['/press.html', '/press'], ['/index.html', '/']]) {
+  const redirects = [
+    ['/press/', '/press'],
+    ['/press.html', '/press'],
+    ['/index.html', '/'],
+    ['/help.html', '/help'],
+    ['/privacy/', '/privacy'],
+    ['/es/terms.html', '/es/terms'],
+    ['/es/help/', '/es/help'],
+  ];
+  for (const [path, to] of redirects) {
     const r = await get(base, path);
     expect([301, 308].includes(r.res.status), `${path}: status ${r.res.status}, want a permanent redirect`);
     const location = r.res.headers.get('location') ?? '';

@@ -1,6 +1,6 @@
 # My Pets public page
 
-The static site at `https://pets.binarybridges.co`: the My Pets homepage at `/` and its press page at `/press` (Astro, in `site/`, on the Binary Bridges design system), and the lost-pet card page at `/p/<id>`.
+The static site at `https://pets.binarybridges.co`: the My Pets homepage at `/`, its press page at `/press` and the Help, Privacy and Terms pages at `/help`, `/privacy`, `/terms` and, in Spanish, under `/es/` (Astro, in `site/`, on the Binary Bridges design system), and the lost-pet card page at `/p/<id>`.
 
 The card page shows a pet's public card, read in the visitor's browser from the My Pets app's iCloud public database. No server, no analytics, no tracking. Design: [docs/DESIGN.md](docs/DESIGN.md).
 
@@ -16,6 +16,7 @@ npm run build          # vendor check, type check (tsc and astro check), Astro t
 npm test               # unit tests: Spec vectors, reader, text
 npm run check:budget   # gzipped weight of the built page
 npm run check:spec     # test/spec/public-card.json is the pinned copy (IOS_REPO=<checkout> also compares bytes)
+npm run check:legal    # the Help, Privacy and Terms texts are the pinned iOS copies (IOS_REPO=<checkout> also compares them)
 npm run check:tokens   # site/src/styles/tokens.css and the marks are the pinned bb-context copies (BB_CONTEXT=<checkout> also compares bytes)
 npm run check:headers  # headers, rewrites and redirects on the local preview (check:pages: on wrangler pages dev)
 npm run test:e2e       # Playwright on Chromium, Firefox and WebKit

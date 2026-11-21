@@ -15,6 +15,7 @@ Goals:
 - The site serves `/.well-known/apple-app-site-association`, so My Pets opens from the link.
 - The same `dist/` deploys to Cloudflare Pages (chosen), GitHub Pages or Netlify.
 - `/` and `/press` are the My Pets homepage and press page (issue #8), built with Astro on the Binary Bridges design system (site surface, tokens pinned in `site/TOKENS_SOURCE`), indexable, with no script, no cookie, no storage and no request outside the site.
+- `/help`, `/privacy`, `/terms` and their Spanish twins `/es/help`, `/es/privacy`, `/es/terms` (issues #9, #11) are the App Store's Support and Privacy Policy URLs and the app's Settings links. Same layout, rules and headers as `/press`; their text is the iOS repo's `Store/website/` copy, pinned in `site/src/content/legal/LEGAL_SOURCE` (`npm run check:legal`) and rendered from Markdown at build time; each names its twin with `hreflang` and links to it.
 
 Non-goals: writes of any kind (the page holds a read-only token and the World role can only read), scan counters, maps, Apple's CloudKit JS script, fonts on the card page (only the homepage self-hosts Geist), service workers, analytics on any page.
 
@@ -34,9 +35,10 @@ flowchart LR
 |---|---|
 | `p/index.html` | The page for every `/p/*` (a 200 rewrite). Its static body is state A, in English and Spanish |
 | `index.html`, `press.html` | The homepage and the press page, built by Astro from `site/` (served at `/` and `/press`) |
+| `help.html`, `privacy.html`, `terms.html`, `es/` | Help, Privacy and Terms in English and, under `es/`, Spanish, built by Astro from `site/` |
 | `_astro/*.css`, `_astro/*.woff2` | The homepage's stylesheets and its two Geist Latin fonts, content-hashed |
 | `icon.svg`, `icon-dark.svg`, `badges/*.svg` | The Bridge cat (pinned copy of bb-context's) and Apple's official App Store badges (`site/BADGES_SOURCE`) |
-| `sitemap.xml`, `robots.txt` | `/` and `/press` for search engines |
+| `sitemap.xml`, `robots.txt` | `/`, `/press` and the Help, Privacy and Terms pages for search engines |
 | `fixture/` | Only in a `--launch=fixture` build (CI): the launch-state test media. Never in a normal build (`npm run check:no-fixture`) |
 | `404.html` | "This isn't a My Pets tag link." for anything else |
 | `assets/page.<hash>.js`, `assets/page.<hash>.css` | The only script and stylesheet, content-hashed |
@@ -146,7 +148,7 @@ Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'
 Cache-Control: no-cache
 ```
 
-`/` and `/press` replace the CSP and drop `X-Robots-Tag` (a later `_headers` rule detaches them with `! Name`, then sets its own; Pages applies rules in order):
+`/`, `/press`, `/help`, `/privacy`, `/terms` and `/es/help`, `/es/privacy`, `/es/terms` replace the CSP and drop `X-Robots-Tag` (a later `_headers` rule detaches them with `! Name`, then sets its own; Pages applies rules in order):
 
 ```
 Content-Security-Policy: default-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; media-src 'self';
@@ -206,9 +208,10 @@ When §15 changes: copy the new file, update `SPEC_SOURCE` (commit and SHA-256),
   - `nojs.spec.ts`: JavaScript off shows state A in both languages, the 404 notice and the home;
   - `a11y.spec.ts`: axe-core with no violation on every state in light and dark, the keyboard order of state C, reduced motion;
   - `layout.spec.ts`: 320, 375, 768, 1024, 1440 and 1920 px in light and dark, no sideways scroll, the Call button on screen and at least 44 px tall;
+  - `legal.spec.ts`: the six Help, Privacy and Terms pages: axe at 320 and 1024 px in both themes, no sideways scroll, language, headings, landmarks, canonical and `hreflang` twins, the language link, the footer links on every site page, the effective date, no placeholder, no script, no request outside the site, no storage.
   - `home.spec.ts`, `home-privacy.spec.ts`, `home-layout.spec.ts`, `home-a11y.spec.ts`: the homepage and `/press` content in order, the badge, banner and privacy line from the config, no request outside the site, no storage, 320 to 1920 px in both themes with 44 px standalone controls, axe at 320, 1024 and 1920 px in both themes, headings, landmarks, focus and reduced motion. They read the launch state from `test/e2e/launch-state.ts` and run twice in CI: on the normal build and with `PETS_LAUNCH=fixture` on the launch fixture build.
 - **Homepage units**: `site-launch.test.ts` (validation, badge, banner and privacy line tied together, price lines around the end date, press contact), `site-copy.test.ts` (banned words and names, the proof points, roadmap and disclaimer verbatim), `site-build.test.ts` (no reserved path in `site/`, telemetry off, no colour outside the tokens, one CSP string, pinned badges, the no-fixture check).
-- **Host** (`npm run check:headers`, `npm run check:pages`, each with `-- --launch=fixture` for the fixture build): DESIGN §8–§10 on the local preview and on `wrangler pages dev`, the homepage, `/press`, their assets, the sitemap, robots.txt and the clean-URL redirects included.
+- **Host** (`npm run check:headers`, `npm run check:pages`, each with `-- --launch=fixture` for the fixture build): DESIGN §8–§10 on the local preview and on `wrangler pages dev`, the homepage, `/press`, the Help, Privacy and Terms pages in both languages, their assets, the sitemap, robots.txt and the clean-URL redirects included.
 - **Tokens** (`npm run check:tokens`): the token file and the marks match `site/TOKENS_SOURCE` (`BB_CONTEXT=<checkout>` also compares the bytes).
 - **Budget** (`npm run check:budget`): §7, plus a CSP with Trusted Types in the built output.
 
