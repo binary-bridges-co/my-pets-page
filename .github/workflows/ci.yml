@@ -46,10 +46,12 @@ jobs:
         run: npm run check:headers
       - name: The same on Cloudflare's local Pages emulation
         run: npm run check:pages
+      - name: The AWS host build, its generated CloudFront configuration current, and the same check on its local emulation
+        run: node scripts/build.mjs --host=aws && npm run check:aws
       - name: The GitHub Pages fallback builds too
         run: node scripts/build.mjs --host=github-pages && npm run check:budget
       - name: The launch fixture build (released state) passes the budget and the header checks
-        run: node scripts/build.mjs --launch=fixture && npm run check:budget -- --launch=fixture && npm run check:headers -- --launch=fixture && npm run check:pages -- --launch=fixture
+        run: node scripts/build.mjs --launch=fixture && npm run check:budget -- --launch=fixture && npm run check:headers -- --launch=fixture && npm run check:pages -- --launch=fixture && npm run check:aws -- --launch=fixture
       - name: The normal build again carries no fixture
         run: npm run build && npm run check:no-fixture
 

@@ -10,10 +10,10 @@ Reused from the archived Kotlin server (`binary-bridges-co/my-pets-server`): the
 
 Goals:
 - `https://pets.binarybridges.co/p/<id>` shows exactly what the owner published, read from the CloudKit public database of `iCloud.co.binarybridges.pets` in the visitor's browser.
-- Nothing runs on a machine Binary Bridges pays for (owner, 5 Nov 2026).
+- Nothing runs on a machine Binary Bridges pays for (owner, 5 Nov 2026): static files on S3 and CloudFront, a few cents a month (`docs/RUNBOOK.md` §9), no server.
 - Nothing about visitors is kept by us: no analytics, no storage, no request other than the one lookup.
 - The site serves `/.well-known/apple-app-site-association`, so My Pets opens from the link.
-- The same `dist/` deploys to Cloudflare Pages (chosen), GitHub Pages or Netlify.
+- The same `dist/` deploys to AWS, CloudFront in front of a private S3 bucket (chosen, owner 21 Nov 2026), Cloudflare Pages, GitHub Pages or Netlify.
 - `/` and `/press` are the My Pets homepage and press page (issue #8), built with Astro on the Binary Bridges design system (site surface, tokens pinned in `site/TOKENS_SOURCE`), indexable, with no script, no cookie, no storage and no request outside the site.
 - `/help`, `/privacy`, `/terms` and their Spanish twins `/es/help`, `/es/privacy`, `/es/terms` (issues #9, #11) are the App Store's Support and Privacy Policy URLs and the app's Settings links. Same layout, rules and headers as `/press`; their text is the iOS repo's `Store/website/` copy, pinned in `site/src/content/legal/LEGAL_SOURCE` (`npm run check:legal`) and rendered from Markdown at build time; each names its twin with `hreflang` and links to it.
 
@@ -23,7 +23,7 @@ Non-goals: writes of any kind (the page holds a read-only token and the World ro
 
 ```mermaid
 flowchart LR
-  B[Finder's browser] -- "GET /p/&lt;id&gt; (HTML, CSS, JS)" --> H[Static host<br/>Cloudflare Pages]
+  B[Finder's browser] -- "GET /p/&lt;id&gt; (HTML, CSS, JS)" --> H[Static host<br/>CloudFront + private S3]
   B -- "POST records/lookup<br/>(one request, no cookie)" --> C[api.apple-cloudkit.com<br/>public database]
   A[My Pets app] -- "save PublicLink records<br/>(owner's iCloud account)" --> C
   CDN[Apple's AASA CDN] -- "GET /.well-known/apple-app-site-association" --> H
@@ -43,7 +43,7 @@ flowchart LR
 | `404.html` | "This isn't a My Pets tag link." for anything else |
 | `assets/page.<hash>.js`, `assets/page.<hash>.css` | The only script and stylesheet, content-hashed |
 | `.well-known/apple-app-site-association` | App links (§9) |
-| `_headers`, `_redirects` | Cloudflare Pages and Netlify configuration (§8, §10) |
+| `_headers`, `_redirects` | Cloudflare Pages and Netlify configuration (§8, §10), and the source the AWS configuration is generated from; never uploaded to S3 |
 | `.nojekyll` | So GitHub Pages serves the dot folder |
 
 `scripts/build.mjs` runs Astro first (it owns and empties `dist/`), then the card build, which fails if Astro wrote any path it owns. Astro's telemetry is off before Astro is imported. The homepage's launch state (App Store state and id, release date, launch-price end date, press address, video, screenshots) is one file, `site/src/config/launch.ts`; `--launch=fixture` builds the released state with test media for CI.
@@ -159,7 +159,7 @@ Cache-Control: no-cache
 
 `_astro/*` is immutable; `sitemap.xml` and `robots.txt` drop `X-Robots-Tag`. Once the app has an App Store id, the homepage carries Apple's Smart App Banner meta: Safari then asks Apple for the banner, which the page's privacy line says (`sitePrivacyLine`).
 
-`connect-src` names the CloudKit endpoint and nothing else; `img-src blob:` is for the photo built from the record's bytes. `assets/*` get `Cache-Control: public, max-age=31536000, immutable`. The AASA file gets `Content-Type: application/json` and `Cache-Control: max-age=3600`. `scripts/check-headers.mjs` checks all of it against any base URL: the local preview in CI, the Pages preview and production at go-live.
+`connect-src` names the CloudKit endpoint and nothing else; `img-src blob:` is for the photo built from the record's bytes. `assets/*` get `Cache-Control: public, max-age=31536000, immutable`. The AASA file gets `Content-Type: application/json` and `Cache-Control: max-age=3600`. `scripts/check-headers.mjs` checks all of it against any base URL: the local preview, `wrangler pages dev` and the AWS emulation in CI, the CloudFront address after every deploy, and production at go-live.
 
 ## 9. App links
 
@@ -173,11 +173,19 @@ Team ID `9JB56TN367` (Binary Bridges SAS), bundle id `co.binarybridges.pets` (ow
 
 ## 10. Hosting
 
-Cloudflare Pages on the free plan (owner, 5 Nov 2026), built from this repository by Pages' Git integration (`docs/RUNBOOK.md`). `_redirects` holds the one rewrite, `/p/*  /p/  200` (Pages answers 404 for a rewrite to `/p/index.html`); Pages serves `404.html` for anything else. Pages adds `Access-Control-Allow-Origin: *` to static files by default; `_headers` detaches it. Pages serves clean URLs: `/press` is `press.html`, and `/press.html`, `/press/` and `/index.html` answer 308 to the clean path, so each page has one address. Web Analytics stays **off** (it injects a script). The custom domain `pets.binarybridges.co` is a CNAME to the project's `pages.dev` name at Namecheap; no nameserver move. Step by step: `docs/RUNBOOK.md`.
+**AWS** (owner, 21 Nov 2026, in place of Cloudflare Pages, whose dashboard no longer offered a Pages project): a private S3 bucket (`production-mypets-page`) behind a CloudFront distribution for `pets.binarybridges.co`, declared in bb-infrastructure as its own stack (`aws/my-pets-page/stack.yml`, stack `my-pets-page-aws`) the way bb-sign's frontend is. DNS stays at Namecheap (two CNAME records: the certificate's validation and `pets` to the distribution). Step by step: `docs/RUNBOOK.md`.
 
-Portability: `npm run build -- --host=github-pages` writes the same files plus a `<meta>` CSP (without `frame-ancestors`, which a meta tag can't carry) and a `404.html` that is the page itself, since GitHub Pages has neither headers nor rewrites. Netlify reads the same `_redirects`; its `_headers` has no `! Name` detach, so there the homepage would keep the card's CSP (fonts blocked) and `noindex` until its rules are rewritten.
+- **One source of truth.** `src/host/_headers` and `_redirects` stay as written for Cloudflare Pages. `scripts/aws/` derives the CloudFront configuration from them and from the built pages (`npm run gen:aws`, committed as `aws/cloudfront.generated.yml`, copied verbatim into bb-infrastructure between SHA-256-stamped markers):
+  - each `_headers` rule is a **cache behaviour** whose **response headers policy** carries exactly what Pages sends for that path (rules applied in order, `! Name` detaching). Policies, not a viewer-response function, because CloudFront skips viewer-response functions for status 400 and up, and the 404 page needs the headers too. Literal paths come first, then splats longest first, then `/?*` (every path but `/`, with the `/*` headers, which the 404 page also gets), then the default, which only sees `/`. The generator checks on sample paths that first-match gives every path what Pages' merging gives it, and refuses what CloudFront can't express;
+  - `Content-Type` in `_headers` (the AASA file) becomes the S3 object's content type, set at upload; Cache-Control is both the policy's header and the object's metadata, so CloudFront's own cache follows it (HTML revalidates, hashed files are immutable);
+  - a **viewer-request CloudFront Function** (`scripts/aws/viewer-request.js`, with the page list and the rewrites filled in) does the `/p/*` → `/p/` rewrite with status 200 and Pages' clean URLs: `/press` serves `press.html`, `/press.html`, `/press/` and `/index.html` answer 308 to the clean path. File-only behaviours (`/_astro/*`, `/assets/*`, the AASA, robots, sitemap) skip it;
+  - a missing object (S3 answers 403, the bucket policy grants no listing) is `404.html` with status 404 (custom error responses).
+- **Checked three ways.** `npm test` (`test/unit/aws-host.test.ts`): the committed file is current, every path's policy equals Pages' headers, the function's routes, the upload plan and the deploy commands. `npm run check:aws`: `scripts/check-headers.mjs`, unchanged, against `scripts/preview-aws.mjs`, which serves `dist/` through the generated behaviours, policies and function code. After every deploy: the same check against the live distribution.
+- **Deploy** (`.github/workflows/deploy.yml`, `scripts/deploy-aws.mjs`): on `main`, GitHub OIDC to the role `github-actions-my-pets-page-deploy` (put and delete objects in the bucket, invalidate the distribution, nothing else), build with the production config, upload by content type, prune, invalidate `/*`.
+- **Privacy.** No CloudFront standard or real-time logs, no S3 access logs, no cookie forwarded or set, no WAF, no analytics. What AWS processes transiently is in `docs/RUNBOOK.md` §8.
+- **One environment.** One distribution, production. The development CloudKit token's allowed origin is the local preview (`http://localhost:4173`); there is no hosted preview (the `*.pages.dev` one is gone).
 
-`npm run preview` serves `dist/` locally with the same `_headers` and `_redirects` rules, and the browser tests and the header check run against it. `npm run check:pages` runs the same header check against `wrangler pages dev` (Cloudflare's own local emulation of Pages, no account), so CI checks the host's real rules too.
+Portability: Cloudflare Pages reads `_headers` and `_redirects` as they are (`npm run check:pages` runs the header check on `wrangler pages dev`; `npm run preview` follows Pages' rules too, with its 308 clean URLs and its `Access-Control-Allow-Origin: *` default that `_headers` detaches). `npm run build -- --host=github-pages` writes the same files plus a `<meta>` CSP (without `frame-ancestors`, which a meta tag can't carry) and a `404.html` that is the page itself, since GitHub Pages has neither headers nor rewrites. Netlify reads the same `_redirects`; its `_headers` has no `! Name` detach, so there the homepage would keep the card's CSP (fonts blocked) and `noindex` until its rules are rewritten.
 
 ## 11. Threats
 
@@ -211,8 +219,8 @@ When §15 changes: copy the new file, update `SPEC_SOURCE` (commit and SHA-256),
   - `legal.spec.ts`: the six Help, Privacy and Terms pages: axe at 320 and 1024 px in both themes, no sideways scroll, language, headings, landmarks, canonical and `hreflang` twins, the language link, the footer links on every site page, the effective date, no placeholder, no script, no request outside the site, no storage.
   - `home.spec.ts`, `home-privacy.spec.ts`, `home-layout.spec.ts`, `home-a11y.spec.ts`: the homepage and `/press` content in order, the badge, banner and privacy line from the config, no request outside the site, no storage, 320 to 1920 px in both themes with 44 px standalone controls, axe at 320, 1024 and 1920 px in both themes, headings, landmarks, focus and reduced motion. They read the launch state from `test/e2e/launch-state.ts` and run twice in CI: on the normal build and with `PETS_LAUNCH=fixture` on the launch fixture build.
 - **Homepage units**: `site-launch.test.ts` (validation, badge, banner and privacy line tied together, price lines around the end date, press contact), `site-copy.test.ts` (banned words and names, the proof points, roadmap and disclaimer verbatim), `site-build.test.ts` (no reserved path in `site/`, telemetry off, no colour outside the tokens, one CSP string, pinned badges, the no-fixture check).
-- **Host** (`npm run check:headers`, `npm run check:pages`, each with `-- --launch=fixture` for the fixture build): DESIGN §8–§10 on the local preview and on `wrangler pages dev`, the homepage, `/press`, the Help, Privacy and Terms pages in both languages, their assets, the sitemap, robots.txt and the clean-URL redirects included.
+- **Host** (`npm run check:headers`, `npm run check:pages`, `npm run check:aws`, each with `-- --launch=fixture` for the fixture build): DESIGN §8–§10 on the local preview, on `wrangler pages dev` and on the AWS emulation, the homepage, `/press`, the Help, Privacy and Terms pages in both languages, their assets, the sitemap, robots.txt and the clean-URL redirects included.
 - **Tokens** (`npm run check:tokens`): the token file and the marks match `site/TOKENS_SOURCE` (`BB_CONTEXT=<checkout>` also compares the bytes).
 - **Budget** (`npm run check:budget`): §7, plus a CSP with Trusted Types in the built output.
 
-Not automated: Lighthouse's timings (the plan's LCP, CLS, INP and TBT targets). The page is one 0.7 KB HTML file, 1.6 KB of CSS and 13 KB of JS gzipped, with no font or third-party request; a Lighthouse run on the Pages preview is part of the go-live checks.
+Not automated: Lighthouse's timings (the plan's LCP, CLS, INP and TBT targets). The page is one 0.7 KB HTML file, 1.6 KB of CSS and 13 KB of JS gzipped, with no font or third-party request; a Lighthouse run on the CloudFront address is part of the go-live checks.

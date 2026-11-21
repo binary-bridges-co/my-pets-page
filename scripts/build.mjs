@@ -1,7 +1,10 @@
 // Builds dist/ (DESIGN §2): first the homepage and /press with Astro (site/), then the card page, the
 // 404 notice, the hashed script and stylesheet, and the host files. Nothing here reaches the network:
 // Astro's telemetry is off before Astro is loaded.
-//   node scripts/build.mjs [--host=cloudflare|github-pages] [--config=production|development|test] [--launch=fixture]
+//   node scripts/build.mjs [--host=cloudflare|aws|github-pages] [--config=production|development|test] [--launch=fixture]
+// --host=aws (CloudFront and S3, docs/DESIGN.md §10) writes the same dist/ as Cloudflare (the deploy skips the
+// host files) and then fails unless aws/cloudfront.generated.yml, the CloudFront configuration derived from
+// _headers, _redirects and the built pages, is current (npm run gen:aws).
 // --launch=fixture builds the homepage in its released launch state with the test media in dist/fixture/,
 // for CI only (site/src/config/launch.ts). PETS_LAUNCH comes from this flag alone.
 import { build } from 'esbuild';
@@ -16,7 +19,7 @@ const arg = (name, fallback) => process.argv.find((a) => a.startsWith(`--${name}
 const host = arg('host', 'cloudflare');
 const configName = arg('config', 'production');
 const launch = arg('launch', '');
-if (!['cloudflare', 'github-pages'].includes(host)) throw new Error(`unknown host ${host}`);
+if (!['cloudflare', 'aws', 'github-pages'].includes(host)) throw new Error(`unknown host ${host}`);
 if (!['', 'fixture'].includes(launch)) throw new Error(`unknown launch ${launch}: only --launch=fixture`);
 if (launch === 'fixture') process.env.PETS_LAUNCH = 'fixture';
 else delete process.env.PETS_LAUNCH;
@@ -120,7 +123,7 @@ write('.nojekyll', '');
 for (const file of ['_headers', '_redirects', '.well-known/apple-app-site-association']) {
   const source = new URL(`src/host/${file}`, root);
   if (existsSync(source)) write(file, readFileSync(source));
-  else if (host === 'cloudflare' && file === '_headers') throw new Error(`src/host/${file} is missing`);
+  else if (host !== 'github-pages' && file === '_headers') throw new Error(`src/host/${file} is missing`);
 }
 // The launch fixture's media, in the fixture build only (site/src/config/launch.ts FIXTURE_DIR).
 if (launch === 'fixture') {
@@ -128,5 +131,11 @@ if (launch === 'fixture') {
   guard(target);
   mkdirSync(target);
   for (const f of ['screenshot.png', 'poster.png', 'preview.mp4']) cpSync(new URL(`test/fixtures/site/${f}`, root), new URL(f, target));
+}
+if (host === 'aws') {
+  const { GENERATED, hostModel } = await import('./aws/host.mjs');
+  if (!existsSync(GENERATED) || readFileSync(GENERATED, 'utf8') !== hostModel(dist).text) {
+    throw new Error('build: aws/cloudfront.generated.yml is stale for this build: run npm run gen:aws, commit it and copy it into bb-infrastructure (docs/RUNBOOK.md §7)');
+  }
 }
 console.log(`build: dist/ for ${host} (${configName}${launch ? `, launch ${launch}` : ''}): assets/${jsFile}, assets/${cssFile}`);

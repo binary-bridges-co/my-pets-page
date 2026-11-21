@@ -4,7 +4,7 @@
 // 200 and no redirect, the 200 rewrite of /p/<id>, the 404 for anything else, the sitemap and robots.txt,
 // and the clean-URL redirects that keep one copy of each page.
 //   node scripts/check-headers.mjs                 # builds nothing; serves dist/ with scripts/preview.mjs
-//   node scripts/check-headers.mjs https://my-pets-page.pages.dev   # a preview or production, at go-live
+//   node scripts/check-headers.mjs https://d123.cloudfront.net   # the CloudFront address or production (after every deploy, at go-live)
 //   add --launch=fixture after a `node scripts/build.mjs --launch=fixture` build: also the fixture media
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';

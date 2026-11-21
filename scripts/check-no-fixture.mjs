@@ -1,4 +1,4 @@
-// A normal dist/ (what Cloudflare Pages deploys) carries nothing of the launch fixture: no dist/fixture/
+// A normal dist/ (what the deploy publishes) carries nothing of the launch fixture: no dist/fixture/
 // folder and no fixture App Store id in any file. CI runs it after the last normal build.
 //   node scripts/check-no-fixture.mjs [--dir=dist]
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
