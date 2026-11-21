@@ -22,7 +22,12 @@
     "check:headers": "node scripts/check-headers.mjs",
     "check:pages": "node scripts/check-pages.mjs",
     "check:tokens": "scripts/check-tokens-source.sh",
-    "check:no-fixture": "node scripts/check-no-fixture.mjs"
+    "check:no-fixture": "node scripts/check-no-fixture.mjs",
+    "gen:aws": "node scripts/gen-aws.mjs",
+    "check:aws": "node scripts/check-aws.mjs",
+    "check:aws-infra": "node scripts/gen-aws.mjs --infra",
+    "preview:aws": "node scripts/preview-aws.mjs",
+    "deploy:aws": "node scripts/deploy-aws.mjs"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",

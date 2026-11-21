@@ -1,0 +1,62 @@
+name: Deploy
+
+# Publishes main to the AWS host (docs/RUNBOOK.md §2, docs/DESIGN.md §10): S3 bucket production-mypets-page
+# behind CloudFront, both declared in bb-infrastructure (aws/my-pets-page/stack.yml). Credentials come from
+# GitHub's OIDC token: the role github-actions-my-pets-page-deploy trusts only this repository's main
+# branch and may only write objects to that bucket and invalidate that distribution. No stored key.
+# The job is skipped until the owner sets the repository variables of RUNBOOK §0 step 7.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  ASTRO_TELEMETRY_DISABLED: 1
+  AWS_REGION: us-east-1
+  BUCKET: production-mypets-page
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and publish to CloudFront
+    if: github.ref == 'refs/heads/main' && vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DISTRIBUTION_ID: ${{ vars.AWS_DISTRIBUTION_ID }}
+      SITE_URL: ${{ vars.SITE_URL }}
+    steps:
+      - name: The distribution and the address to check are set
+        run: |
+          [[ "$DISTRIBUTION_ID" =~ ^E[A-Z0-9]{5,20}$ ]] || { echo "::error::repository variable AWS_DISTRIBUTION_ID is missing or not a distribution id"; exit 1; }
+          [[ "$SITE_URL" =~ ^https://[a-z0-9.-]+$ ]] || { echo "::error::repository variable SITE_URL must be https://<host> (the CloudFront address until DNS moves, then https://pets.binarybridges.co)"; exit 1; }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Build for the AWS host with the production CloudKit settings (fails if the CloudFront configuration is stale)
+        run: npm run build -- --host=aws --config=production
+      - name: Weight budget
+        run: npm run check:budget
+      - name: Headers, rewrite, 404 and AASA on the AWS host's local emulation
+        run: npm run check:aws
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: my-pets-page-deploy-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Upload with content types and Cache-Control, remove stale objects, invalidate
+        run: node scripts/deploy-aws.mjs --bucket="$BUCKET" --distribution="$DISTRIBUTION_ID"
+      - name: The live site answers as the contract says (headers, rewrite, 404, AASA)
+        run: npm run check:headers -- "$SITE_URL"
