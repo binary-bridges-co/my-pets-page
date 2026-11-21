@@ -1,4 +1,4 @@
-// The launch state the served dist/ was built with: the real config, or the pre-order fixture when
+// The launch state the served dist/ was built with: the real config, or the released fixture when
 // PETS_LAUNCH=fixture (playwright.config.ts then builds with --launch=fixture). The home specs read their
 // expectations from here and branch on it, so both builds run the same tests with nothing skipped.
 import { resolveConfig } from '../../site/src/config/launch';

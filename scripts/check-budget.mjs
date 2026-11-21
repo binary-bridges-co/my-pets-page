@@ -19,7 +19,6 @@ const MEDIA = {
   'icon-dark.svg': 2 * KB,
   'badges/download-on-the-app-store-black.svg': 16 * KB,
   'badges/download-on-the-app-store-white.svg': 16 * KB,
-  'badges/pre-order-on-the-app-store-black.svg': 20 * KB,
 };
 const FIXTURE_MEDIA = { 'fixture/screenshot.png': 30 * KB, 'fixture/poster.png': 30 * KB, 'fixture/preview.mp4': 60 * KB };
 const ROOT_FILES = ['index.html', 'press.html', '404.html', 'sitemap.xml', 'robots.txt', '.nojekyll', '_headers', '_redirects', 'icon.svg', 'icon-dark.svg'];

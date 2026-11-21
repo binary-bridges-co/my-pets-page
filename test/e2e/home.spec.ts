@@ -3,6 +3,7 @@
 import { DISCLAIMER, FAQ, ORIGIN, PRESS, PRICE, PRIVACY, PROMISE, PROOF_POINTS, ROADMAP } from '../../site/src/content/en';
 import { FIXTURE_ID } from '../../site/src/config/launch';
 import { formatDate } from '../../site/src/lib/launch';
+import { WRONG_CLAIMS } from '../support/wrong-claims';
 import { config, expected, isFixture } from './launch-state';
 import { expect, test } from './support';
 
@@ -115,8 +116,9 @@ test('/press: description, fact sheet, media, icon, privacy, developer note and 
   await expect(page.locator('h1')).toHaveCount(1);
   const main = squash(await page.textContent('main'));
   for (const t of [...PRESS.about, DISCLAIMER, PRESS.privacy, ORIGIN.story, ORIGIN.signature]) expect(main).toContain(t);
-  const fact = (label: string) => page.locator('#facts dt', { hasText: label }).locator('xpath=following-sibling::dd[1]');
-  for (const [label, value] of [PRESS.facts.name, PRESS.facts.developer, PRESS.facts.platforms, PRESS.facts.category, PRESS.facts.language]) {
+  // Exact label: "Name" is also the end of "App Store name".
+  const fact = (label: string) => page.locator('#facts dt', { hasText: new RegExp(`^${label}$`) }).locator('xpath=following-sibling::dd[1]');
+  for (const [label, value] of [PRESS.facts.name, PRESS.facts.storeName, PRESS.facts.developer, PRESS.facts.platforms, PRESS.facts.category, PRESS.facts.language]) {
     await expect(fact(label)).toHaveText(value);
   }
   await expect(fact(PRESS.facts.price)).toContainText(expected.price.line);
@@ -167,5 +169,24 @@ test('no script, no style attribute and no inline style in either page', async (
     const html = (await response?.text()) ?? '';
     expect(html, path).not.toMatch(/<script|\sstyle=|<style|javascript:|\son[a-z]+=/i);
     await expect(page.locator('script')).toHaveCount(0);
+  }
+});
+
+test('no wrong claim in either built page, its head included (owner, 21 Nov 2026)', async ({ page }) => {
+  for (const path of ['/', '/press']) {
+    const response = await page.goto(path);
+    const html = (await response?.text()) ?? '';
+    // The roadmap's Next and Later may name iPad and Mac; the disclaimer is the one place "diagnose" appears.
+    const later = /<div[^>]*data-group="(Next|Later)"[^>]*>[\s\S]*?<\/div>/g;
+    expect(path === '/' ? html.match(later)?.length : 0, 'the roadmap groups are found').toBe(path === '/' ? 2 : 0);
+    const text = html
+      .replace(later, ' ')
+      .replace(/\b(?:src|href|srcset)="[^"]*"/g, ' ')
+      .replace(/&#39;|&#x27;|&apos;/g, "'")
+      .replace(/&quot;|&#34;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replaceAll(DISCLAIMER, ' ');
+    for (const [pattern, why] of WRONG_CLAIMS) expect(text, `${path}: ${why}`).not.toMatch(pattern);
+    expect(text, path).toContain('iPhone');
   }
 });

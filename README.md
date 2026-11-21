@@ -19,7 +19,7 @@ npm run check:spec     # test/spec/public-card.json is the pinned copy (IOS_REPO
 npm run check:tokens   # site/src/styles/tokens.css and the marks are the pinned bb-context copies (BB_CONTEXT=<checkout> also compares bytes)
 npm run check:headers  # headers, rewrites and redirects on the local preview (check:pages: on wrangler pages dev)
 npm run test:e2e       # Playwright on Chromium, Firefox and WebKit
-node scripts/build.mjs --launch=fixture   # the homepage in its pre-order launch state, for the checks with -- --launch=fixture
+node scripts/build.mjs --launch=fixture   # the homepage in its released launch state (App Store listing), for the checks with -- --launch=fixture
 npm run check:no-fixture                  # a normal dist/ carries no fixture
 ```
 

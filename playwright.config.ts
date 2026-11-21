@@ -4,7 +4,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4173;
-// PETS_LAUNCH=fixture serves the launch fixture build (the pre-order state), for the home specs.
+// PETS_LAUNCH=fixture serves the launch fixture build (the released state), for the home specs.
 const build = process.env.PETS_LAUNCH === 'fixture' ? 'node scripts/build.mjs --launch=fixture' : 'npm run build --silent';
 
 export default defineConfig({

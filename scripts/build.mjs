@@ -2,7 +2,7 @@
 // 404 notice, the hashed script and stylesheet, and the host files. Nothing here reaches the network:
 // Astro's telemetry is off before Astro is loaded.
 //   node scripts/build.mjs [--host=cloudflare|github-pages] [--config=production|development|test] [--launch=fixture]
-// --launch=fixture builds the homepage in its pre-order launch state with the test media in dist/fixture/,
+// --launch=fixture builds the homepage in its released launch state with the test media in dist/fixture/,
 // for CI only (site/src/config/launch.ts). PETS_LAUNCH comes from this flag alone.
 import { build } from 'esbuild';
 import { createHash } from 'node:crypto';

@@ -78,10 +78,10 @@ Run them with the beta build: a tag tapped and scanned on a phone without My Pet
 
 ## 5. The homepage on launch day
 
-The homepage's launch state is one file, `site/src/config/launch.ts` (`realConfig`); CI already tests the pre-order state with the fixture build.
+The homepage's launch state is one file, `site/src/config/launch.ts` (`realConfig`); CI already tests the released state with the fixture build. There is no pre-order (owner, 21 Nov 2026): the badge area says "Coming soon to the App Store" until release day.
 
-1. When the listing exists: set `appStore` to `{ state: 'pre-order', id: '<digits>' }` (add `campaign` for a `?ct=` tag if wanted), and to `'available'` on release day. The badge, the Smart App Banner and the privacy line follow.
-2. Set `releaseDate` (ISO date) and `launchPrice.endsOn`, the **last** day of the launch price (three months after launch, ISO date; the page says "until" that day, included).
+1. On release day, once the app is on the App Store: set `appStore` to `{ state: 'available', id: '<digits>' }` (add `campaign` for a `?ct=` tag if wanted). The badge, the Smart App Banner and the privacy line follow. Lost mode and the collar tag's public page go live then too, not before.
+2. Set `releaseDate` (ISO date) and `launchPrice.endsOn`, the **last** day of the launch price (the launch price is the first 28 days, so release day plus 27 days, ISO date; the page says "until" that day, included).
 3. Once the mailbox `press@binarybridges.co` receives mail, set `pressEmail` to it. Never before: until then the press page says "Promo codes on request." with no address.
 4. Add real screenshots and the video under `site/public/` with a budget row each (`scripts/check-budget.mjs`), then list them in `screenshots` and `previewVideo`.
 5. **Rebuild the day after `endsOn`** (retry the last deployment in Cloudflare, or push any commit): the page then shows US$19.99 only. Before the rebuild it still tells the truth, since the dated line names both prices.

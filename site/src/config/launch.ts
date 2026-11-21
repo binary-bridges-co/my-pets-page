@@ -1,6 +1,6 @@
 // Launch day is a change to this file only (docs/RUNBOOK.md, launch day): the App Store state and id,
 // the release date, the launch-price end date and, once the mailbox works, the press address.
-// The fixture is the pre-order state, built only by `node scripts/build.mjs --launch=fixture` so CI
+// The fixture is the released state (App Store listing, dated launch price, press address), built only by `node scripts/build.mjs --launch=fixture` so CI
 // tests the launch markup before launch day; its media are copied into dist/fixture/ by that build only.
 import type { LaunchConfig } from '../lib/launch';
 
@@ -19,7 +19,7 @@ export const FIXTURE_DIR = 'fixture';
 export const FIXTURE_ID = '6799990001';
 
 export const fixtureConfig: LaunchConfig = {
-  appStore: { state: 'pre-order', id: FIXTURE_ID, campaign: 'fixture' },
+  appStore: { state: 'available', id: FIXTURE_ID, campaign: 'fixture' },
   releaseDate: '2027-02-01',
   launchPrice: { price: 'US$9.99', regular: 'US$19.99', endsOn: '2099-12-31' },
   pressEmail: 'press@binarybridges.co',

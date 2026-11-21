@@ -62,7 +62,9 @@ test('theme-color is read from the pinned tokens: the paper of each theme', () =
 
 test("Apple's badges are the downloaded files, unaltered (site/BADGES_SOURCE)", () => {
   const lines = read('site/BADGES_SOURCE').trim().split('\n');
-  assert.ok(lines.length >= 3);
+  assert.equal(lines.length, 2, 'the two Download badges; no pre-order badge (owner, 21 Nov 2026)');
+  assert.ok(!existsSync(join(root, 'site/public/badges/pre-order-on-the-app-store-black.svg')));
+  assert.deepEqual(readdirSync(join(root, 'site/public/badges')).sort(), lines.map((l) => (l.split(' ')[2] ?? '').split('/').pop()).sort());
   for (const line of lines) {
     const [url, sha, local] = line.split(' ');
     assert.match(url ?? '', /^https:\/\/(toolbox\.marketingtools\.apple\.com|developer\.apple\.com)\//);

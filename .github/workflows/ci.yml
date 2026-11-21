@@ -46,7 +46,7 @@ jobs:
         run: npm run check:pages
       - name: The GitHub Pages fallback builds too
         run: node scripts/build.mjs --host=github-pages && npm run check:budget
-      - name: The launch fixture build (pre-order state) passes the budget and the header checks
+      - name: The launch fixture build (released state) passes the budget and the header checks
         run: node scripts/build.mjs --launch=fixture && npm run check:budget -- --launch=fixture && npm run check:headers -- --launch=fixture && npm run check:pages -- --launch=fixture
       - name: The normal build again carries no fixture
         run: npm run build && npm run check:no-fixture

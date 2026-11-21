@@ -44,7 +44,7 @@ flowchart LR
 | `_headers`, `_redirects` | Cloudflare Pages and Netlify configuration (§8, §10) |
 | `.nojekyll` | So GitHub Pages serves the dot folder |
 
-`scripts/build.mjs` runs Astro first (it owns and empties `dist/`), then the card build, which fails if Astro wrote any path it owns. Astro's telemetry is off before Astro is imported. The homepage's launch state (App Store state and id, release date, launch-price end date, press address, video, screenshots) is one file, `site/src/config/launch.ts`; `--launch=fixture` builds the pre-order state with test media for CI.
+`scripts/build.mjs` runs Astro first (it owns and empties `dist/`), then the card build, which fails if Astro wrote any path it owns. Astro's telemetry is off before Astro is imported. The homepage's launch state (App Store state and id, release date, launch-price end date, press address, video, screenshots) is one file, `site/src/config/launch.ts`; `--launch=fixture` builds the released state with test media for CI.
 
 Source of the homepage: `site/` (`astro.config.mjs`, `src/pages/`, `src/layouts/`, `src/components/` ported from bb-homepage, `src/content/en.ts` for every word, `src/lib/launch.ts` for the launch logic, `src/styles/tokens.css` pinned from bb-context). Source of the card page: `src/` (TypeScript: `page.ts` entry, `cloudkit.ts`, `reader.ts`, `card.ts`, `chipCard` rules, `fragment.ts`, `ed25519.ts`, `jcs.ts`, `jpeg.ts`, `render.ts`, `text.ts`, `where.ts`, `strings/{en,es}.json`), `vendor/` (pinned `@noble/ed25519`), `config/` (container, environment, token per deploy), `scripts/` (build, vendor and Spec checks, budget, headers check, local preview).
 

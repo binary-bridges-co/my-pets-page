@@ -1,12 +1,14 @@
 // The homepage's words (plan § Copy, #261, #266, #273): every visible string sits in
-// site/src/content/en.ts or comes from site/src/lib/launch.ts, and both are held to the public rules here.
+// site/src/content/en.ts or comes from site/src/lib/launch.ts, and both are held to the public rules here,
+// and to the owner's decisions of 21 Nov 2026 (my-pets-ios#312) so the wrong claims cannot come back.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { fixtureConfig, realConfig } from '../../site/src/config/launch';
 import * as copy from '../../site/src/content/en';
 import { badge, type LaunchConfig, pressContact, priceLines, sitePrivacyLine } from '../../site/src/lib/launch';
+import { WRONG_CLAIMS } from '../support/wrong-claims';
 
-const { DISCLAIMER, FAQ, ORIGIN, PRICE, PRIVACY, PROMISE, PROOF_POINTS, ROADMAP } = copy;
+const { ASSISTANT_SHIPS, DISCLAIMER, DOSE_COPY, FAQ, ORIGIN, PRESS, PRICE, PRIVACY, PROMISE, PROOF_POINTS, ROADMAP } = copy;
 
 function strings(value: unknown, out: string[] = []): string[] {
   if (typeof value === 'string') out.push(value);
@@ -23,6 +25,7 @@ const generated = [realConfig, fixtureConfig, dated, { ...realConfig, appStore: 
   ...strings(priceLines(c, new Date('2027-01-01T00:00:00Z'))),
   ...strings(priceLines(c, new Date('2027-06-01T00:00:00Z'))),
 ]);
+// DOSE_COPY holds both assistant states, so every rule here checks the copy with the switch on and off.
 const all = [...strings(Object.entries(copy).filter(([name]) => name !== 'DISCLAIMER').map(([, v]) => v)), ...generated];
 
 const BANNED_WORDS = ['hash', 'chain', 'signature', 'signed', 'blockchain', 'crypto', 'immutable', 'append-only', 'AI', 'on-device model'];
@@ -38,8 +41,11 @@ test('the copy module has text to check', () => {
   assert.ok(all.length > 60, `${all.length} strings`);
 });
 
-test('no technical word from the banned list (#261)', () => {
-  for (const s of all) for (const w of BANNED_WORDS) assert.ok(!word(w).test(s), `"${w}" in: ${s}`);
+// The one exception (owner, 21 Nov 2026): the PDF is not signed, its QR code is, and the copy says so.
+const SIGNED_QR = 'a signed QR code that anyone with My Pets can scan';
+
+test('no technical word from the banned list (#261), but for the signed QR code', () => {
+  for (const s of all) for (const w of BANNED_WORDS) assert.ok(!word(w).test(s.replaceAll(SIGNED_QR, '')), `"${w}" in: ${s}`);
 });
 
 test('no pet-app or device brand, and not the working name of the format', () => {
@@ -63,35 +69,109 @@ test('no emoji and no typed arrow', () => {
 });
 
 test('the promise, with its one accent phrase', () => {
-  assert.equal(`${PROMISE.headline} ${PROMISE.tail}`, 'Every dose on time, every record yours. One payment, no subscription.');
+  assert.equal(`${PROMISE.headline} ${PROMISE.tail}`, 'Every dose on time, every record yours. One payment. No subscription.');
   assert.ok(PROMISE.headline.includes(PROMISE.accent));
 });
 
-test('the four proof points, verbatim and in order (#261, #266)', () => {
+test('the four proof points, verbatim and in order (#261, #266, owner 21 Nov 2026)', () => {
   assert.deepEqual(
     PROOF_POINTS.map((p) => p.text),
     [
-      'Say what the vet said. My Pets drafts the dose plan for you to check, then sets the alarms. They ring even on silent.',
-      'A record you own and your vet can verify, on your iPhone and in your iCloud.',
-      'No account, no subscription, one payment.',
-      'Lost mode in two taps.',
+      ASSISTANT_SHIPS ? DOSE_COPY.on.proof : DOSE_COPY.off.proof,
+      'A record you own and anyone with My Pets can verify, on your iPhone and in your iCloud.',
+      'No account. One payment. No subscription.',
+      'Lost mode shows a finder only what you choose.',
     ],
   );
+});
+
+test('the assistant switch: off says "enter the plan", on says "say it" and what it needs; the pages follow it', () => {
+  assert.equal(DOSE_COPY.off.proof, "Enter the vet's plan once and My Pets sets the dose alarms. They ring even on silent.");
+  for (const s of Object.values(DOSE_COPY.off)) assert.ok(!/say what|dictat|draft|assistant|Apple Intelligence/i.test(s), s);
+  for (const s of Object.values(DOSE_COPY.on)) {
+    assert.ok(s.startsWith('Say what the vet said.'), s);
+    assert.ok(s.endsWith('Requires Apple Intelligence.'), s);
+  }
+  const state = ASSISTANT_SHIPS ? DOSE_COPY.on : DOSE_COPY.off;
+  const other = ASSISTANT_SHIPS ? DOSE_COPY.off : DOSE_COPY.on;
+  assert.equal(PROOF_POINTS[0]?.text, state.proof);
+  assert.ok(PRESS.about.includes(state.press));
+  // Nothing of the other state leaks into what the pages render.
+  const rendered = strings(Object.entries(copy).filter(([name]) => name !== 'DOSE_COPY').map(([, v]) => v));
+  for (const s of Object.values(other)) assert.ok(!rendered.includes(s), s);
+  if (!ASSISTANT_SHIPS) for (const s of rendered) assert.ok(!/say what the vet said|dictate|Apple Intelligence/i.test(s), s);
+});
+
+// The rendered strings: everything but the inactive assistant wording, which is source only.
+const inactive = new Set<string>(Object.values(ASSISTANT_SHIPS ? DOSE_COPY.off : DOSE_COPY.on));
+const shown = all.filter((s) => !inactive.has(s));
+const laterGroups = new Set(['Next', 'Later']);
+const roadmapLater = new Set(ROADMAP.groups.filter((g) => laterGroups.has(g.name)).flatMap((g) => g.items.flatMap((i) => [i.text, i.note ?? ''])));
+
+
+test('no wrong claim from the 21 Nov 2026 decisions, anywhere the pages render', () => {
+  for (const s of shown) {
+    for (const [pattern, why] of WRONG_CLAIMS) {
+      if (pattern === WRONG_CLAIMS[0]?.[0] && roadmapLater.has(s)) continue;
+      assert.ok(!pattern.test(s), `${why}: ${s}`);
+    }
+  }
+  const now = ROADMAP.groups.find((g) => g.name === 'Now');
+  assert.deepEqual(now?.items.map((i) => i.text), ['iPhone', 'English and Spanish']);
+});
+
+test('the claim checks catch the old sentences', () => {
+  const old = [
+    '00 / My Pets for iPhone and iPad',
+    'One payment covers My Pets on iPhone, iPad and Mac, with all its updates.',
+    'A record you own and your vet can verify, on your iPhone and in your iCloud.',
+    'Export the vaccination card or the full history as a PDF your vet can verify.',
+    'Lost mode in two taps.',
+    'Pre-order on the App Store',
+    'No account and no Binary Bridges server.',
+    'It never goes to a Binary Bridges server.',
+    'My Pets diagnoses problems early.',
+    'Send us your pet records to try it.',
+  ];
+  for (const s of old) assert.ok(WRONG_CLAIMS.some(([p]) => p.test(s)), s);
+  assert.ok(!WRONG_CLAIMS.some(([p]) => p.test('No account, and no Binary Bridges server holds your records.')));
+});
+
+test('the vet check states its condition: a signed QR code anyone with My Pets can scan', () => {
+  const vet = FAQ.items.find((i) => i.q === 'How does my vet check a record?');
+  assert.ok(vet?.a.startsWith('Export the vaccination card as a PDF with a signed QR code that anyone with My Pets can scan to check it.'));
+  assert.ok(PRESS.about.some((p) => p.includes('Export the vaccination card as a PDF with a signed QR code that anyone with My Pets can scan to check it.')));
+});
+
+test('money: "One payment. No subscription." and the owner\'s price only', () => {
+  for (const s of shown) {
+    assert.ok(!/one payment, no subscription|no subscription, one payment/i.test(s), `the one money line is "One payment. No subscription.": ${s}`);
+    for (const amount of s.match(/US\$[\d.,-]+/g) ?? []) assert.ok(['US$9.99', 'US$19.99', 'US$20-50'].includes(amount.replace(/[.,]$/, '')), `${amount} in: ${s}`);
+    assert.ok(!/% off|discount|save \d|only \d+ (days|hours) left|countdown|hurry/i.test(s), s);
+  }
+});
+
+test('the fact sheet: App Store name, Lifestyle, iPhone, English and Spanish', () => {
+  assert.deepEqual(PRESS.facts.name, ['Name', 'My Pets']);
+  assert.deepEqual(PRESS.facts.storeName, ['App Store name', 'My Pets: Pet Health Records']);
+  assert.deepEqual(PRESS.facts.category, ['Category', 'Lifestyle']);
+  assert.deepEqual(PRESS.facts.platforms, ['Platform', 'iPhone']);
+  assert.deepEqual(PRESS.facts.language, ['Languages', 'English and Spanish']);
 });
 
 test('price: what one payment covers (#273) and a sourced comparison', () => {
   assert.equal(
     PRICE.coverage,
-    'One payment covers My Pets on iPhone, iPad and Mac, with all its updates. Android and the clinic app will be separate products, also without subscriptions.',
+    'One payment covers My Pets on iPhone, with all its updates. Android and the clinic app will be separate products, also without subscriptions.',
   );
   assert.equal(PRICE.comparison.text, 'Pet health apps with subscriptions charge about US$20-50 a year.');
   assert.equal(PRICE.comparison.note, 'Typical yearly prices of pet health record apps on the US App Store, checked November 2026.');
 });
 
-test('privacy: no Binary Bridges server, the lost-mode exception, no account; the site keeps nothing', () => {
+test('privacy: no Binary Bridges server holds the records, the lost-mode exception, no account; the site keeps nothing', () => {
   assert.equal(
     PRIVACY.body,
-    "Your pet's data never goes to a Binary Bridges server. Records stay on your iPhone and in your own iCloud, except the lost-pet card you choose to publish in lost mode. There is no account to create.",
+    "No account, and no Binary Bridges server holds your records. They stay on your iPhone and in your own iCloud. The one exception is the lost-pet card you choose to publish in lost mode, with only what you choose to show.",
   );
   assert.equal(PRIVACY.site, 'This site sets no cookies and stores nothing.');
 });
@@ -101,12 +181,12 @@ test('origin: the two problems, signed by the developer (owner decision 3)', () 
   assert.equal(ORIGIN.signature, 'The developer of My Pets, Binary Bridges');
 });
 
-test('roadmap: four groups and their items exactly as #273, no dates', () => {
+test('roadmap: four groups and their items as #273 with the 21 Nov 2026 changes, no dates', () => {
   assert.deepEqual(
     ROADMAP.groups.map((g) => [g.name, g.items.map((i) => i.text)]),
     [
-      ['Now', ['iPhone and iPad']],
-      ['Next', ['Spanish', 'Mac', 'Sitters can mark doses', 'Apple Watch (mark a dose from the wrist)']],
+      ['Now', ['iPhone', 'English and Spanish']],
+      ['Next', ['iPad', 'Mac', 'Sitters can mark doses', 'Apple Watch (mark a dose from the wrist)']],
       [
         'Later',
         ['Android', 'The open record format for apps and devices', 'A page where vets check a record', 'Bring your records in (from other apps or a photo of the paper vaccination card)'],

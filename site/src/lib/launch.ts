@@ -1,7 +1,8 @@
 // The launch state, as pure functions the pages render (plan § Launch config). Tested in Node by
 // test/unit/site-launch.test.ts; the pages hold no logic of their own about the App Store or the price.
 
-export type AppStore = { state: 'coming-soon' } | { state: 'pre-order' | 'available'; id: string; campaign?: string };
+/** No pre-order (owner, 21 Nov 2026): coming soon until release, then the listing. */
+export type AppStore = { state: 'coming-soon' } | { state: 'available'; id: string; campaign?: string };
 
 export interface Video {
   src: string;
@@ -21,7 +22,7 @@ export interface LaunchConfig {
   appStore: AppStore;
   /** ISO date (YYYY-MM-DD) for the fact sheet; null until the launch date is set. */
   releaseDate: string | null;
-  /** endsOn: the last day (ISO date) of the launch price, included; null until launch day (my-pets-ios issue 263: three months from launch). */
+  /** endsOn: the last day (ISO date) of the launch price, included; null until launch day (owner, 21 Nov 2026, my-pets-ios issue 312: the first 28 days, so release day plus 27). */
   launchPrice: { price: 'US$9.99'; regular: 'US$19.99'; endsOn: string | null };
   /** null until the mailbox exists (owner decision 2). */
   pressEmail: string | null;
@@ -78,17 +79,13 @@ export type Badge =
   | { kind: 'apple'; href: string; alt: string; light: string; dark: string | null; width: number; height: number };
 
 /**
- * Apple's official artwork, unaltered, once the app has a listing; before that a plain text label, since
- * Apple has no "coming soon" badge. Shown 48 px tall (Apple's minimum is 40; 44 is the touch target).
- * Apple publishes the pre-order badge in black only (its grey border is made for dark backgrounds).
+ * Apple's official artwork, unaltered, once the app is on the App Store; before that a plain text label,
+ * since Apple has no "coming soon" badge. Shown 48 px tall (Apple's minimum is 40; 44 is the touch target).
  */
 export function badge(config: LaunchConfig): Badge {
   const store = config.appStore;
   if (store.state === 'coming-soon') return { kind: 'label', text: 'Coming soon to the App Store' };
   const href = `https://apps.apple.com/app/id${store.id}${store.campaign ? `?ct=${store.campaign}` : ''}`;
-  if (store.state === 'pre-order') {
-    return { kind: 'apple', href, alt: 'Pre-order on the App Store', light: '/badges/pre-order-on-the-app-store-black.svg', dark: null, width: 141, height: 48 };
-  }
   return {
     kind: 'apple',
     href,
@@ -114,10 +111,10 @@ export function sitePrivacyLine(config: LaunchConfig): string {
 /** The price as of the build. "until <endsOn>" includes that day; the regular price starts the day after. The dated sentence names both prices, so a page not rebuilt stays true. */
 export function priceLines(config: LaunchConfig, buildDate: Date): { amount: string; line: string } {
   const { price, regular, endsOn } = config.launchPrice;
-  if (endsOn === null) return { amount: price, line: `${price} launch price for the first three months, then ${regular}.` };
+  if (endsOn === null) return { amount: price, line: `${price} launch price for the first 28 days, then ${regular}.` };
   const today = buildDate.toISOString().slice(0, 10);
-  if (today <= endsOn) return { amount: price, line: `${price} launch price until ${formatDate(endsOn)}, then ${regular}. One payment, no subscription.` };
-  return { amount: regular, line: `${regular}, one payment, no subscription.` };
+  if (today <= endsOn) return { amount: price, line: `${price} launch price until ${formatDate(endsOn)}, then ${regular}. One payment. No subscription.` };
+  return { amount: regular, line: `${regular}. One payment. No subscription.` };
 }
 
 /** The promo-code line: an address and a mailto: link only once one is set. */
