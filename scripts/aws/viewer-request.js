@@ -6,12 +6,21 @@
 // - one copy of each page: /press.html, /press/, /index.html and /p/index answer 308 to the clean path;
 // - anything else goes to S3 unchanged; a missing object is the distribution's 404 page (status 404).
 // /404.html is passed through: it is the distribution's error page.
+// No redirect leaves the site: a URI that starts with `//` or `/\`, or holds a backslash or an encoded slash
+// or backslash, is passed through unchanged (S3 misses, the 404 page answers), and every Location is one `/`
+// plus a path whose repeated slashes are collapsed, never raw input.
 var DATA = { pages: [], rewrites: [] };
 
 var PAGES = {};
 for (var i = 0; i < DATA.pages.length; i++) PAGES[DATA.pages[i]] = true;
 var REWRITES = [];
 for (var j = 0; j < DATA.rewrites.length; j++) REWRITES.push({ from: new RegExp(DATA.rewrites[j][0]), to: DATA.rewrites[j][1] });
+
+var HOSTILE = /^\/[\/\\]|\\|%2f|%5c/i;
+
+function sameSite(path) {
+  return '/' + path.replace(/\/{2,}/g, '/').replace(/^\/+/, '');
+}
 
 function route(path) {
   if (path.charAt(path.length - 1) === '/') {
@@ -42,6 +51,7 @@ function query(qs) {
 
 function handler(event) {
   var request = event.request;
+  if (HOSTILE.test(request.uri)) return request;
   if (request.uri === '/404.html') return request;
   var path = request.uri;
   for (var r = 0; r < REWRITES.length; r++) {
@@ -52,7 +62,7 @@ function handler(event) {
   }
   var target = route(path);
   if (target.location !== undefined) {
-    return { statusCode: 308, statusDescription: 'Permanent Redirect', headers: { location: { value: target.location + query(request.querystring) } } };
+    return { statusCode: 308, statusDescription: 'Permanent Redirect', headers: { location: { value: sameSite(target.location) + query(request.querystring) } } };
   }
   request.uri = target.uri;
   return request;

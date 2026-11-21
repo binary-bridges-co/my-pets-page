@@ -129,6 +129,53 @@ test('the function serves clean URLs and redirects every other spelling with 308
   assert.equal(call('/press.html', { ref: { value: 'x' } }).headers?.location.value, '/press?ref=x', 'the query string is kept');
 });
 
+// Security review of #13 (HIGH): no redirect may leave the site. A Location that starts with `//` or `/\`
+// is another host to a browser.
+const SAME_SITE = /^\/(?![/\\])/;
+
+test('the function never redirects off the site: hostile spellings end as the 404 page', () => {
+  for (const uri of ['//evil.example/index', '//evil.example/index/', '/\\evil.example/index', '/%2f%2fevil.example/x', '/%5Cevil.example/x', '/%2F/evil.example/index', '/p/%5c', '/a\\b']) {
+    const out = call(uri);
+    assert.equal(out.statusCode, undefined, `${uri}: no redirect`);
+    assert.equal(out.uri, uri, `${uri}: passed through unchanged, so S3 misses and the 404 page answers`);
+  }
+});
+
+test('repeated slashes never reach a Location', () => {
+  const out = call('/a//b/');
+  assert.ok(out.statusCode === undefined || SAME_SITE.test(out.headers!.location.value), '/a//b/');
+  for (const uri of ['/es//help/', '/press//', '/es//terms.html', '/index//']) {
+    const o = call(uri);
+    if (o.statusCode !== undefined) {
+      assert.match(o.headers!.location.value, SAME_SITE, uri);
+      assert.ok(!o.headers!.location.value.includes('//'), `${uri}: ${o.headers!.location.value}`);
+    }
+  }
+  const q = call('/press.html', { next: { value: '//evil.example' } });
+  assert.equal(q.headers?.location.value, '/press?next=//evil.example', 'a query string stays after a same-site path');
+  assert.match(q.headers!.location.value, SAME_SITE);
+});
+
+test('every redirect the function can produce stays on the site', () => {
+  const words = ['', 'index', 'index.html', 'press', 'press.html', 'p', 'es', 'help', 'help.html', 'evil.example', '\\', '%2f', '%5c', '.', '..'];
+  const uris = new Set<string>();
+  for (const a of words) for (const b of words) for (const sep of ['/', '//']) {
+    uris.add(`/${a}${sep}${b}`);
+    uris.add(`/${a}${sep}${b}/`);
+    uris.add(`//${a}/${b}`);
+  }
+  for (const page of pages) for (const form of [page, page.replace(/\.html$/, ''), page.replace(/\.html$/, '/'), page.replace(/index\.html$/, 'index/')]) uris.add(form);
+  let redirects = 0;
+  for (const uri of uris) {
+    const out = call(uri, { q: { value: '1' } });
+    if (out.statusCode === undefined) continue;
+    redirects++;
+    assert.equal(out.statusCode, 308, uri);
+    assert.match(out.headers!.location.value, SAME_SITE, `${uri} -> ${out.headers!.location.value}`);
+  }
+  assert.ok(redirects > 20, `the corpus exercised ${redirects} redirects`);
+});
+
 test('the function passes files, unknown paths and the error page through unchanged', () => {
   for (const uri of ['/not-a-page', '/es/', '/icon.svg', '/404.html', '/assets/page.abc.js', '/.well-known/apple-app-site-association']) assert.equal(call(uri).uri, uri, uri);
 });

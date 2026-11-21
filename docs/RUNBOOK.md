@@ -14,14 +14,14 @@ Short form of sections 1 to 3; the details and the checks are there. Steps 1 to 
 
 1. **Certificate.** AWS console, region **N. Virginia (us-east-1)** (top right) → **Certificate Manager** → **Request** → **Request a public certificate** → Next → Fully qualified domain name `pets.binarybridges.co` → **DNS validation** → key algorithm **RSA 2048** → **Request**. Open the new certificate and copy its **ARN**, and under **Domains** its **CNAME name** and **CNAME value** (§2, step 1).
 2. **Validation record at Namecheap.** Domain List → `binarybridges.co` → **Manage** → **Advanced DNS** → **Add new record** → `CNAME Record`: **Host** = the CNAME name without `.binarybridges.co.` (it looks like `_1a2b…9f.pets`), **Value** = the CNAME value (it looks like `_3c4d…7e.abcdefgh.acm-validations.aws.`), TTL Automatic → save (the green tick). Keep this record for good: ACM renews the certificate with it. Wait until the certificate says **Issued** (5 to 30 minutes).
-3. **Give the ARN** to the agent (or paste it as `CertificateArn` in bb-infrastructure's `aws/my-pets-page/params.json` on the PR branch).
+3. **Give the ARN** to the agent (or paste it as `CertificateArn` in bb-infrastructure's `aws/my-pets-page/params.json` on the PR branch). Done 21 Nov 2026.
 4. **Deploy the GitHub roles by hand** (AWS admin, a terminal with the AWS CLI logged in, a bb-infrastructure checkout of the PR branch): the commands of §2 step 2. Expect one `Add` (`MyPetsPageCfnServiceRole`) and two `Modify` (`PlanRole`, `ExecuteRole`) rows, nothing else.
 5. **Re-run the PR's check** "AWS CloudFormation (my-pets-page)" (the PR → **Checks** → that workflow → **Re-run all jobs**): its comment lists eleven `Add` rows (the bucket and its policy, the origin access control, six header policies, the function, the distribution). **Merge the bb-infrastructure PR.** Its workflow creates the stack (5 to 15 minutes, mostly CloudFront).
 6. **Read the outputs**: CloudFormation (us-east-1) → Stacks → `my-pets-page-aws` → **Outputs**: `DistributionId` (`E…`) and `DistributionDomainName` (`d….cloudfront.net`).
 7. **Deploy the GitHub roles by hand again**, now from bb-infrastructure `main`, with the distribution id (§2, step 4): one `Add` row, `MyPetsPageDeployRole`; the stack's new output `MyPetsPageDeployRoleArn` is the deploy role.
 8. **Three repository variables here**: GitHub → `binary-bridges-co/my-pets-page` → **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → **New repository variable**: `AWS_DEPLOY_ROLE_ARN` = the ARN of step 7; `AWS_DISTRIBUTION_ID` = `E…`; `SITE_URL` = `https://d….cloudfront.net` (the domain name of step 6 with `https://`).
 9. **Merge this repository's PR** (if it is already merged: **Actions** → **Deploy** → **Run workflow** on `main`). The workflow builds, uploads, invalidates and ends with `npm run check:headers` against `SITE_URL`: it must be green.
-10. **The site's record at Namecheap** (Advanced DNS): **delete** the `A Record` `pets` → `46.202.176.67` (the old VPS), then **Add new record** → `CNAME Record`, Host `pets`, Value the domain name of step 6 followed by a dot (`d….cloudfront.net.`), TTL Automatic → save. Change the variable `SITE_URL` to `https://pets.binarybridges.co` and run the checks of §3. Privacy, Help and Terms are live.
+10. **The site's record at Namecheap** (Advanced DNS): if an `A` or `CNAME` record for `pets` exists, **delete** it (today there is none: `46.202.176.67` is the apex `@`, which stays); then **Add new record** → `CNAME Record`, Host `pets`, Value the domain name of step 6 followed by a dot (`d….cloudfront.net.`), TTL Automatic → save. Change the variable `SITE_URL` to `https://pets.binarybridges.co` and run the checks of §3. Privacy, Help and Terms are live.
 
 **CloudKit (after the Apple Developer Program renewal)**
 
@@ -69,23 +69,25 @@ Record in `docs/DESIGN.md` §3 and as fixtures in `test/support/scenarios.ts`: t
 How it is built (DESIGN §10): CloudFront serves the private bucket `production-mypets-page` through origin access control, HTTPS only (HTTP is redirected), HTTP/2 and HTTP/3. Every `_headers` rule is a cache behaviour whose response headers policy carries exactly the headers Cloudflare Pages would send for that path; a viewer-request CloudFront Function does `_redirects`' rewrite and Pages' clean URLs; a missing object is `404.html` with status 404. The policies, the function and the behaviours are **generated here** (`npm run gen:aws`, committed as `aws/cloudfront.generated.yml`) and copied verbatim into bb-infrastructure (§7). Only this repository's deploy workflow writes to the bucket, through the role `github-actions-my-pets-page-deploy` (GitHub OIDC, `main` only; it may put and delete objects in that bucket and invalidate that distribution, nothing else; no stored key).
 
 1. **Certificate** (§0 steps 1 and 2): ACM in **us-east-1** (CloudFront only takes certificates from there), DNS validation, the validation CNAME at Namecheap kept for renewals. If the zone has **CAA** records, one must allow Amazon (`amazon.com`); with no CAA record, nothing to do. Check: the certificate shows **Issued**.
-2. **The roles, by hand** (bb-infrastructure `aws/github-oidc.yml`, a stack no workflow deploys), from a checkout of the bb-infrastructure PR branch, in the region where the stack `bb-github-oidc` already is:
+2. **The roles, by hand** (bb-infrastructure `aws/github-oidc.yml`, a stack no workflow deploys), from a checkout of the bb-infrastructure PR branch. The first deploy also takes bb-sign's distribution id (`BbSignDistributionId`, which the new service role is explicitly denied; it isn't in git, so it is read from the bb-sign stack):
    ```bash
-   aws cloudformation deploy --stack-name bb-github-oidc --template-file aws/github-oidc.yml \
-     --capabilities CAPABILITY_NAMED_IAM --no-execute-changeset
-   aws cloudformation describe-change-set --change-set-name <the ARN it printed> \
+   BB_SIGN_DIST=$(aws cloudformation describe-stacks --region us-east-1 --stack-name bb-sign-aws \
+     --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)
+   aws cloudformation deploy --region us-east-1 --stack-name bb-github-oidc --template-file aws/github-oidc.yml \
+     --capabilities CAPABILITY_NAMED_IAM --parameter-overrides BbSignDistributionId="$BB_SIGN_DIST" --no-execute-changeset
+   aws cloudformation describe-change-set --region us-east-1 --change-set-name <the ARN it printed> \
      --query 'Changes[].ResourceChange.[Action,LogicalResourceId,Replacement]' --output table
-   aws cloudformation execute-change-set --change-set-name <the same ARN>
-   aws cloudformation wait stack-update-complete --stack-name bb-github-oidc
+   aws cloudformation execute-change-set --region us-east-1 --change-set-name <the same ARN>
+   aws cloudformation wait stack-update-complete --region us-east-1 --stack-name bb-github-oidc
    ```
    Expect `Add MyPetsPageCfnServiceRole`, `Modify PlanRole`, `Modify ExecuteRole` and nothing else (parameters you don't pass keep their values). Check: IAM → Roles has `bb-infrastructure-cfn-my-pets-page`.
 3. **The stack** (the merge of the bb-infrastructure PR): the workflow "AWS CloudFormation (my-pets-page)" creates `my-pets-page-aws` through that role; CloudFront takes 5 to 15 minutes. A failed creation rolls back by itself and leaves the stack `ROLLBACK_COMPLETE`: read the failed event (CloudFormation → the stack → **Events**), **Delete** the stack, tell the agent, and re-run the workflow after the fix. Check: the stack is `CREATE_COMPLETE` with four outputs.
 4. **The deploy role, by hand**, from bb-infrastructure `main`:
    ```bash
-   aws cloudformation deploy --stack-name bb-github-oidc --template-file aws/github-oidc.yml \
+   aws cloudformation deploy --region us-east-1 --stack-name bb-github-oidc --template-file aws/github-oidc.yml \
      --capabilities CAPABILITY_NAMED_IAM --parameter-overrides MyPetsPageDistributionId=<DistributionId> --no-execute-changeset
    ```
-   then describe and execute as in step 2: one row, `Add MyPetsPageDeployRole`. Check: the stack's output `MyPetsPageDeployRoleArn`.
+   then describe, execute and wait as in step 2 (each with `--region us-east-1`): one row, `Add MyPetsPageDeployRole`. Check: the stack's output `MyPetsPageDeployRoleArn`.
 5. **The variables and the first deploy** (§0 steps 8 and 9). The deploy job is skipped while `AWS_DEPLOY_ROLE_ARN` is unset, so merging this repository before the AWS side does no harm. Every later merge to `main` publishes by itself.
 6. **Check on the CloudFront address**, before the DNS moves (the deploy already ran it):
    ```bash
@@ -104,7 +106,7 @@ What the deploy does (`scripts/deploy-aws.mjs`): `npm run build -- --host=aws --
    | CNAME | `_<token>.pets` (from ACM) | `_<token>.<id>.acm-validations.aws.` (from ACM) | Certificate validation and renewal; keep it |
    | CNAME | `pets` | `d<id>.cloudfront.net.` (`DistributionDomainName`) | The site |
 
-   Delete the old `A  pets  46.202.176.67` first: a host can't have an `A` and a `CNAME` record at once.
+   If an `A` or `CNAME` record for `pets` exists, delete it first (a host can't have an `A` and a `CNAME` record at once). Today there is none: `46.202.176.67` is the apex (`@`), which stays.
 2. DNS takes minutes (Namecheap's automatic TTL is at most 30 minutes; the old `A` record may be cached that long).
 3. Check:
    ```bash
@@ -180,7 +182,9 @@ Expected: **US$0.00 to 0.05 a month** for a small site.
 | S3 | About 1 MB stored (US$0.023 per GB-month); some hundred writes per deploy (US$0.005 per 1,000) and CloudFront's revalidations of HTML (US$0.0004 per 1,000) | under US$0.05 |
 | ACM certificate, response headers policies, origin access control | | free |
 
-What could raise it: traffic past the free tier, which is shared with bb-sign's distribution in the same account (then about US$0.0075 to 0.016 per 10,000 HTTPS requests and US$0.085 to 0.12 per GB, by region; a request flood is billed too, as there is no WAF); turning on CloudFront logging, real-time logs, a WAF or the console's one-click "security protections" (a paid pricing plan and web ACL); a second distribution for development. Recommended once: AWS **Billing and Cost Management** → **Budgets** → **Create budget** → a monthly cost budget of US$5 with an email alert (the first two budgets are free).
+What could raise it: traffic past the free tier, which is shared with bb-sign's distribution in the same account (then about US$0.0075 to 0.016 per 10,000 HTTPS requests and US$0.085 to 0.12 per GB, by region; a request flood is billed too, as there is no WAF); turning on CloudFront logging, real-time logs, a WAF or the console's one-click "security protections" (a paid pricing plan and web ACL); a second distribution for development.
+
+Worst case, as there is no WAF: a request flood is billed. About **US$75 to 160 per 100 million requests** at CloudFront past the shared free tier; when the flood asks for random paths (each a 404 that misses the cache), add up to about US$40 of S3 GETs (US$0.0004 per 1,000) and US$10 of function runs (US$0.10 per million) per 100 million, plus the 404 page's bytes. The account's existing AWS budget, with alerts at 80 % and 90 %, covers it: an alert arrives long before such a bill. A separate budget for this site is optional.
 
 ## 10. If the host must change
 
