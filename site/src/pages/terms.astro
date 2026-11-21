@@ -1,0 +1,7 @@
+---
+// /terms: the text is content/legal/en/terms.md, copied from the iOS repository (LEGAL_SOURCE).
+import LegalArticle from '../components/LegalArticle.astro';
+import * as text from '../content/legal/en/terms.md';
+---
+
+<LegalArticle lang="en" page="terms" html={await text.compiledContent()} />

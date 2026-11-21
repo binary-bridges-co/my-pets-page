@@ -1,28 +1,37 @@
 ---
 import { SITE } from '../content/en';
+import { CHROME, LEGAL, LEGAL_PAGES, legalPath, type Lang } from '../content/legal';
 
 interface Props {
-  current: 'home' | 'press';
+  current?: 'home' | 'press' | 'help' | 'privacy' | 'terms';
+  lang?: Lang;
 }
-const { current } = Astro.props;
-const links = [
-  { href: '/#roadmap', label: SITE.nav.roadmap },
-  { href: '/#faq', label: SITE.nav.faq },
-  { href: '/press', label: SITE.nav.press, current: current === 'press' },
-];
+const { current, lang = 'en' } = Astro.props;
+// The Spanish pages are Help, Privacy and Terms only (there is no Spanish homepage yet), so their
+// header links to those three; the brand still leads to the homepage.
+const links =
+  lang === 'es'
+    ? LEGAL_PAGES.map((page) => ({ href: legalPath(page, 'es'), label: LEGAL.es[page].nav, current: current === page }))
+    : [
+        { href: '/#roadmap', label: SITE.nav.roadmap, current: false },
+        { href: '/#faq', label: SITE.nav.faq, current: false },
+        { href: '/press', label: SITE.nav.press, current: current === 'press' },
+      ];
+const chrome = CHROME[lang];
 ---
 
 <header class="site-header">
-  <a class="skip-link" href="#main">{SITE.skip}</a>
+  <a class="skip-link" href="#main">{chrome.skip}</a>
   <div class="wrap site-header__inner">
-    <a href="/" class="brand" aria-current={current === 'home' ? 'page' : undefined}>
+    <a href="/" class="brand" aria-current={current === 'home' ? 'page' : undefined} hreflang={lang === 'en' ? undefined : 'en'}>
       <picture>
         <source srcset="/icon-dark.svg" media="(prefers-color-scheme: dark)" />
         <img src="/icon.svg" alt="" width="32" height="32" />
       </picture>
       <span class="brand__word">{SITE.name}</span>
+      {lang === 'es' && <span class="sr-only">(en inglés)</span>}
     </a>
-    <nav aria-label={SITE.navLabel}>
+    <nav aria-label={chrome.navLabel}>
       <ul>
         {
           links.map((link) => (

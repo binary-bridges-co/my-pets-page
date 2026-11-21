@@ -1,0 +1,7 @@
+---
+// /es/help: the text is content/legal/es/help.md, copied from the iOS repository (LEGAL_SOURCE).
+import LegalArticle from '../../components/LegalArticle.astro';
+import * as text from '../../content/legal/es/help.md';
+---
+
+<LegalArticle lang="es" page="help" html={await text.compiledContent()} />

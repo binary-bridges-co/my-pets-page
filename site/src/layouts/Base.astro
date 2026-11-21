@@ -1,7 +1,8 @@
 ---
 // Every page's document: the head (title, description, canonical, Open Graph, theme-color read from the
 // pinned tokens, the icon, one font preload, Apple's Smart App Banner once there is a listing), the
-// header, main and footer. No script of any kind.
+// header, main and footer. No script of any kind. The Help, Privacy and Terms pages also pass their
+// language and the hreflang alternates of their twin in the other language (content/legal.ts).
 import geistLatin from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
 import tokensCss from '../styles/tokens.css?raw';
 import '../styles/global.css';
@@ -9,6 +10,7 @@ import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import { config } from '../config/current';
 import { SITE } from '../content/en';
+import type { Lang } from '../content/legal';
 import { metaCsp } from '../lib/csp';
 import { sitePrivacyLine, smartAppBanner } from '../lib/launch';
 import { themeColors } from '../lib/tokens';
@@ -16,13 +18,16 @@ import { themeColors } from '../lib/tokens';
 interface Props {
   title: string;
   description: string;
-  path: '/' | '/press';
-  current: 'home' | 'press';
+  path: string;
+  current?: 'home' | 'press' | 'help' | 'privacy' | 'terms';
   /** Whether the footer carries the site's privacy line (the homepage shows it in its privacy section). */
   footerPrivacy?: boolean;
+  lang?: Lang;
+  /** The page in every language, itself included: one <link rel="alternate" hreflang> each, plus x-default (English). */
+  alternates?: { lang: Lang; path: string }[];
 }
 
-const { title, description, path, current, footerPrivacy = true } = Astro.props;
+const { title, description, path, current, footerPrivacy = true, lang = 'en', alternates = [] } = Astro.props;
 const canonical = new URL(path, SITE.url).href;
 const theme = themeColors(tokensCss);
 const banner = smartAppBanner(config);
@@ -30,7 +35,7 @@ const githubPages = process.env.PETS_HOST === 'github-pages';
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -40,11 +45,18 @@ const githubPages = process.env.PETS_HOST === 'github-pages';
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {alternates.map((a) => <link rel="alternate" hreflang={a.lang} href={new URL(a.path, SITE.url).href} />)}
+    {
+      alternates
+        .filter((a) => a.lang === 'en')
+        .map((a) => <link rel="alternate" hreflang="x-default" href={new URL(a.path, SITE.url).href} />)
+    }
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={SITE.name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={lang === 'es' ? 'es_419' : 'en_US'} />
     <meta name="theme-color" content={theme.light} media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content={theme.dark} media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
@@ -52,10 +64,10 @@ const githubPages = process.env.PETS_HOST === 'github-pages';
     {banner && <meta name="apple-itunes-app" content={banner} />}
   </head>
   <body>
-    <SiteHeader current={current} />
+    <SiteHeader current={current} lang={lang} />
     <main id="main">
       <slot />
     </main>
-    <SiteFooter privacyLine={footerPrivacy ? sitePrivacyLine(config) : undefined} />
+    <SiteFooter privacyLine={footerPrivacy && lang === 'en' ? sitePrivacyLine(config) : undefined} lang={lang} current={current} />
   </body>
 </html>

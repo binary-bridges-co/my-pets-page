@@ -1,0 +1,7 @@
+---
+// /es/privacy: the text is content/legal/es/privacy.md, copied from the iOS repository (LEGAL_SOURCE).
+import LegalArticle from '../../components/LegalArticle.astro';
+import * as text from '../../content/legal/es/privacy.md';
+---
+
+<LegalArticle lang="es" page="privacy" html={await text.compiledContent()} />

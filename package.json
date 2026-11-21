@@ -10,6 +10,7 @@
   "scripts": {
     "check:vendor": "node scripts/check-vendor.mjs",
     "check:spec": "scripts/check-spec-source.sh",
+    "check:legal": "scripts/check-legal-source.sh",
     "typecheck": "tsc --noEmit -p . && ASTRO_TELEMETRY_DISABLED=1 astro check --root site",
     "build": "npm run check:vendor && npm run typecheck && node scripts/build.mjs",
     "test:unit": "node scripts/build-tests.mjs && node --test --test-reporter=spec build/test/*.test.mjs",

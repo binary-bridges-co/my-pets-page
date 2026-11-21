@@ -15,7 +15,8 @@
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src https://api.apple-cloudkit.com; font-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'
 
 # Pages joins a header that two matching rules set, so each Cache-Control has its own paths.
-# The homepage and /press: no script at all, same-origin styles, fonts, images and media, indexable.
+# The homepage, /press, /help, /privacy, /terms and their Spanish twins under /es/: no script at all,
+# same-origin styles, fonts, images and media, nothing fetched (connect-src 'none'), indexable.
 /
   ! Content-Security-Policy
   ! X-Robots-Tag
@@ -23,6 +24,42 @@
   Cache-Control: no-cache
 
 /press
+  ! Content-Security-Policy
+  ! X-Robots-Tag
+  Content-Security-Policy: default-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+  Cache-Control: no-cache
+
+/help
+  ! Content-Security-Policy
+  ! X-Robots-Tag
+  Content-Security-Policy: default-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+  Cache-Control: no-cache
+
+/privacy
+  ! Content-Security-Policy
+  ! X-Robots-Tag
+  Content-Security-Policy: default-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+  Cache-Control: no-cache
+
+/terms
+  ! Content-Security-Policy
+  ! X-Robots-Tag
+  Content-Security-Policy: default-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+  Cache-Control: no-cache
+
+/es/help
+  ! Content-Security-Policy
+  ! X-Robots-Tag
+  Content-Security-Policy: default-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+  Cache-Control: no-cache
+
+/es/privacy
+  ! Content-Security-Policy
+  ! X-Robots-Tag
+  Content-Security-Policy: default-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'
+  Cache-Control: no-cache
+
+/es/terms
   ! Content-Security-Policy
   ! X-Robots-Tag
   Content-Security-Policy: default-src 'none'; script-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; manifest-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'

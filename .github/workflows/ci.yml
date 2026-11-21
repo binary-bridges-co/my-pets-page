@@ -32,6 +32,8 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Spec vectors are the pinned copy
         run: npm run check:spec
+      - name: Help, Privacy and Terms texts are the pinned copies
+        run: npm run check:legal
       - name: Design tokens and marks are the pinned copies
         run: npm run check:tokens
       - name: Build (vendor check, type check, bundle)
